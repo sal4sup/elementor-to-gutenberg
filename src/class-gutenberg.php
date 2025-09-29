@@ -20,6 +20,13 @@ class Gutenberg
 {
 
     /**
+     * Flag to ensure layout utilities stylesheet is only enqueued once per request.
+     *
+     * @var bool
+     */
+    private bool $layout_utilities_enqueued = false;
+
+    /**
      * Instance to call certain functions globally within the plugin
      *
      * @var self|null _instance
@@ -82,6 +89,7 @@ class Gutenberg
     {
         add_action('init', array( $this, 'init' ), 1);
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+        add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_assets' ) );
     }
 
     /**
@@ -95,6 +103,16 @@ class Gutenberg
             array(),
             '6.5.0'
         );
+
+        $this->enqueue_layout_utilities_style();
+    }
+
+    /**
+     * Enqueue styles for the block editor.
+     */
+    public function enqueue_editor_assets(): void
+    {
+        $this->enqueue_layout_utilities_style();
     }
 
     /**
@@ -102,6 +120,34 @@ class Gutenberg
      */
     public function init(): void
     {
-		new Admin_Settings();
+                new Admin_Settings();
+    }
+
+    /**
+     * Register the layout utilities stylesheet if needed.
+     */
+    private function enqueue_layout_utilities_style(): void
+    {
+        if ( $this->layout_utilities_enqueued ) {
+            return;
+        }
+
+        $handle = 'elementor-to-gutenberg-layout-utilities';
+        $css    = ' .etg-grid{display:grid;gap:var(--wp--style--block-gap,1.5rem);} '
+            . '.etg-grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr));}'
+            . '.etg-grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}'
+            . '.etg-grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}'
+            . '.etg-grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr));}'
+            . '.etg-grid-cols-5{grid-template-columns:repeat(5,minmax(0,1fr));}'
+            . '.etg-grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr));}';
+
+        if ( ! wp_style_is( $handle, 'registered' ) ) {
+            wp_register_style( $handle, false, array(), GUTENBERG_PLUGIN_VERSION );
+        }
+
+        wp_enqueue_style( $handle );
+        wp_add_inline_style( $handle, $css );
+
+        $this->layout_utilities_enqueued = true;
     }
 }
