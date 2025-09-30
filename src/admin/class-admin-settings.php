@@ -5,7 +5,11 @@
  * @package Progressus\Gutenberg
  */
 namespace Progressus\Gutenberg\Admin;
+use Progressus\Gutenberg\Admin\Helper\Block_Builder;
 use Progressus\Gutenberg\Admin\Helper\File_Upload_Service;
+use Progressus\Gutenberg\Admin\Helper\Style_Parser;
+use Progressus\Gutenberg\Admin\Layout\Columns_Widths;
+use Progressus\Gutenberg\Admin\Layout\Container_Classifier;
 defined( 'ABSPATH' ) || exit;
 /**
  * Main admin settings class for Elementor to Gutenberg conversion.
@@ -204,38 +208,204 @@ class Admin_Settings {
 		return $this->parse_elementor_elements( $json_data['content'] );
 	}
 
-	/**
-	 * Parse Elementor elements to Gutenberg blocks.
-	 *
-	 * @param array $elements The Elementor elements array.
-	 * @return string The converted Gutenberg block content.
-	 */
-	public function parse_elementor_elements( array $elements ): string {
-		$block_content = '';
-		foreach ( $elements as $element ) {
-			if ( isset( $element['elType'] ) && 'container' === $element['elType'] ) {
-				$inner = ! empty( $element['elements'] ) ? $this->parse_elementor_elements( $element['elements'] ) : '';
-				$block_content .= sprintf(
-					'<!-- wp:group --><div class="wp-block-group">%s</div><!-- /wp:group -->' . "\n",
-					$inner
-				);
-			} elseif ( isset( $element['elType'] ) && 'widget' === $element['elType'] ) {
-				$handler = Widget_Handler_Factory::get_handler( $element['widgetType'] );
-				if ( null !== $handler ) {
-					$block_content .= $handler->handle( $element );
-				} else {
-					$block_content .= sprintf(
-						'<!-- wp:paragraph -->%s<!-- /wp:paragraph -->' . "\n",
-						esc_html( $element['widgetType'] )
-					);
-				}
-			} else {
-				$block_content .= sprintf(
-					'<!-- wp:paragraph -->%s<!-- /wp:paragraph -->' . "\n",
-					esc_html__( 'Unknown element', 'elementor-to-gutenberg' )
-				);
-			}
-		}
-		return $block_content;
-	}
+        /**
+         * Parse Elementor elements to Gutenberg blocks.
+         *
+         * @param array $elements The Elementor elements array.
+         * @return string The converted Gutenberg block content.
+         */
+        public function parse_elementor_elements( array $elements ): string {
+                $block_content = '';
+
+                foreach ( $elements as $element ) {
+                        if ( ! is_array( $element ) ) {
+                                continue;
+                        }
+
+                        $el_type = $element['elType'] ?? '';
+
+                        if ( 'container' === $el_type ) {
+                                $block_content .= $this->render_container( $element );
+                                continue;
+                        }
+
+                        if ( 'widget' === $el_type ) {
+                                $block_content .= $this->render_widget( $element );
+                                continue;
+                        }
+
+                        $block_content .= $this->render_unknown_element();
+                }
+
+                return $block_content;
+        }
+
+        /**
+         * Render a container element into Gutenberg markup.
+         *
+         * @param array $element Elementor container element.
+         *
+         * @return string
+         */
+        private function render_container( array $element ): string {
+                $children = $this->get_container_children( $element );
+
+                $settings = isset( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : array();
+
+                if ( empty( $children ) ) {
+                        $attrs = Style_Parser::parse_container_styles( $settings );
+                        return Block_Builder::build( 'group', $attrs, '' );
+                }
+
+                if ( Container_Classifier::should_render_columns( $element, $children ) ) {
+                        return $this->render_columns_row( $element, $children );
+                }
+
+                if ( Container_Classifier::is_grid( $element ) ) {
+                        return $this->render_grid_group( $element, $children );
+                }
+
+                return $this->render_group( $element, $children );
+        }
+
+        /**
+         * Render container as columns block.
+         *
+         * @param array $element  Parent container.
+         * @param array $children Child containers for columns.
+         *
+         * @return string
+         */
+        private function render_columns_row( array $element, array $children ): string {
+                $settings  = isset( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : array();
+                $row_attrs = Style_Parser::parse_container_styles( $settings );
+
+                $normalized_widths = Columns_Widths::normalize( $children );
+                $columns_html      = '';
+
+                foreach ( $children as $index => $child ) {
+                        $child_settings = isset( $child['settings'] ) && is_array( $child['settings'] ) ? $child['settings'] : array();
+                        $child_attrs    = Style_Parser::parse_container_styles( $child_settings );
+                        if ( isset( $normalized_widths[ $index ] ) ) {
+                                $child_attrs['width'] = $normalized_widths[ $index ];
+                        }
+
+                        $inner_elements = $child['elements'] ?? array();
+                        $inner_html     = $this->parse_elementor_elements( is_array( $inner_elements ) ? $inner_elements : array() );
+                        $columns_html  .= Block_Builder::build( 'column', $child_attrs, $inner_html );
+                }
+
+                return Block_Builder::build( 'columns', $row_attrs, $columns_html );
+        }
+
+        /**
+         * Render container as grid group.
+         *
+         * @param array $element  Parent container.
+         * @param array $children Child elements.
+         *
+         * @return string
+         */
+        private function render_grid_group( array $element, array $children ): string {
+                $settings = isset( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : array();
+                $attrs    = Style_Parser::parse_container_styles( $settings );
+                $attrs['layout'] = array( 'type' => 'grid' );
+
+                $column_count = Container_Classifier::get_grid_column_count( $element, count( $children ) );
+                if ( $column_count > 0 ) {
+                        $attrs['layout']['columnCount'] = $column_count;
+                        $class_name = $attrs['className'] ?? '';
+                        $class_name = trim( $class_name . ' etg-grid-cols-' . $column_count );
+                        $attrs['className'] = trim( $class_name );
+                }
+
+                $items_html = '';
+                foreach ( $children as $child ) {
+                        $child_html = $this->parse_elementor_elements( array( $child ) );
+                        $items_html .= Block_Builder::build(
+                                'group',
+                                array( 'layout' => array( 'type' => 'constrained' ) ),
+                                $child_html
+                        );
+                }
+
+                return Block_Builder::build( 'group', $attrs, $items_html );
+        }
+
+        /**
+         * Render container as a regular group block.
+         *
+         * @param array $element  Container element.
+         * @param array $children Child elements.
+         *
+         * @return string
+         */
+        private function render_group( array $element, array $children ): string {
+                $settings = isset( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : array();
+                $attrs    = Style_Parser::parse_container_styles( $settings );
+                $attrs['layout'] = array( 'type' => 'constrained' );
+
+                $inner_html = $this->parse_elementor_elements( $children );
+
+                return Block_Builder::build( 'group', $attrs, $inner_html );
+        }
+
+        /**
+         * Render a widget element.
+         *
+         * @param array $element Elementor widget element.
+         *
+         * @return string
+         */
+        private function render_widget( array $element ): string {
+                $widget_type = $element['widgetType'] ?? '';
+                $handler     = $widget_type ? Widget_Handler_Factory::get_handler( $widget_type ) : null;
+
+                if ( null !== $handler ) {
+                        return $handler->handle( $element );
+                }
+
+                $label = $widget_type ? $widget_type : esc_html__( 'Unknown widget', 'elementor-to-gutenberg' );
+
+                return Block_Builder::build(
+                        'group',
+                        array( 'layout' => array( 'type' => 'constrained' ) ),
+                        sprintf(
+                                '<!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph -->',
+                                esc_html( $label )
+                        )
+                );
+        }
+
+        /**
+         * Render markup for unknown elements.
+         *
+         * @return string
+         */
+        private function render_unknown_element(): string {
+                return Block_Builder::build(
+                        'group',
+                        array( 'layout' => array( 'type' => 'constrained' ) ),
+                        sprintf(
+                                '<!-- wp:paragraph --><p>%s</p><!-- /wp:paragraph -->',
+                                esc_html__( 'Unknown element', 'elementor-to-gutenberg' )
+                        )
+                );
+        }
+
+        /**
+         * Get valid container children.
+         *
+         * @param array $element Elementor container element.
+         *
+         * @return array
+         */
+        private function get_container_children( array $element ): array {
+                $children = $element['elements'] ?? array();
+                if ( ! is_array( $children ) ) {
+                        return array();
+                }
+
+                return array_values( array_filter( $children, 'is_array' ) );
+        }
 }
