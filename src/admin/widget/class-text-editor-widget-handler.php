@@ -33,18 +33,27 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
 			$class .= ' has-text-transform-' . esc_attr( $settings['typography_text_transform'] );
 		}
 
-		$typography   = Style_Parser::parse_typography( $settings );
-		$style       .= $typography['style'];
-		$attrs_array  = array(
-			'style' => array(
-				'color'      => array( 'text' => $color ),
-				'typography' => $typography['attributes'],
-			),
-		);
-		$attrs_array  = array_merge_recursive( $attrs_array, Style_Parser::parse_spacing( $settings ) );
-		$attrs        = wp_json_encode( $attrs_array );
+		$typography      = Style_Parser::parse_typography( $settings );
+		$typography_attr = isset( $typography['attributes'] ) && is_array( $typography['attributes'] ) ? $typography['attributes'] : array();
+		$typography_css  = isset( $typography['style'] ) && is_string( $typography['style'] ) ? $typography['style'] : '';
+		$style          .= $typography_css;
 
-		$block_content  = sprintf(
+		$attrs_array = array( 'style' => array() );
+		if ( '' !== $color ) {
+			$attrs_array['style']['color'] = array( 'text' => $color );
+		}
+		if ( ! empty( $typography_attr ) ) {
+			$attrs_array['style']['typography'] = $typography_attr;
+		}
+
+		$attrs_array = array_merge_recursive( $attrs_array, Style_Parser::parse_spacing( $settings ) );
+		if ( empty( $attrs_array['style'] ) ) {
+			unset( $attrs_array['style'] );
+		}
+
+		$attrs = wp_json_encode( $attrs_array );
+
+		$block_content = sprintf(
 			'<!-- wp:html %s --><div class="wp-block-paragraph %s" style="%s">%s</div><!-- /wp:html -->' . "\n",
 			$attrs,
 			$class,

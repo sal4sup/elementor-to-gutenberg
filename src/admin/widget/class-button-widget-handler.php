@@ -95,9 +95,16 @@ class Button_Widget_Handler implements Widget_Handler_Interface {
 		$attrs_array = array_merge_recursive( $attrs_array, Style_Parser::parse_spacing( $settings ) );
 
 		// Typography
-		$typography  = Style_Parser::parse_typography( $settings );
-		$inline_style .= $typography['style'];
-		$attrs_array['style']['typography'] = $typography['attributes'];
+		$typography      = Style_Parser::parse_typography( $settings );
+		$typography_attr = isset( $typography['attributes'] ) && is_array( $typography['attributes'] ) ? $typography['attributes'] : array();
+		$typography_css  = isset( $typography['style'] ) && is_string( $typography['style'] ) ? $typography['style'] : '';
+		$inline_style   .= $typography_css;
+		if ( ! empty( $typography_attr ) ) {
+			$attrs_array['style']['typography'] = $typography_attr;
+		}
+		if ( empty( $attrs_array['style'] ) ) {
+			unset( $attrs_array['style'] );
+		}
 
 		$attrs = wp_json_encode( $attrs_array );
 
