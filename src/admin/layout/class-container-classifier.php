@@ -20,64 +20,30 @@ class Container_Classifier {
 	 *
 	 * @return bool
 	 */
-	public static function is_grid( array $element ): bool {
-		$settings = $element['settings'] ?? array();
-		$child_count = isset( $element['elements'] ) && is_array( $element['elements'] ) ? count( $element['elements'] ) : 0;
+public static function is_grid( array $element ): bool {
+$settings    = is_array( $element['settings'] ?? null ) ? $element['settings'] : array();
+$child_count = isset( $element['elements'] ) && is_array( $element['elements'] ) ? count( $element['elements'] ) : 0;
 
-		if ( isset( $settings['layout'] ) && 'grid' === $settings['layout'] ) {
-			return true;
-		}
+if ( isset( $settings['container_type'] ) && 'grid' === $settings['container_type'] ) {
+return true;
+}
 
-		if ( isset( $settings['display'] ) && 'grid' === $settings['display'] ) {
-			return true;
-		}
+$grid_hints = array(
+'grid_columns',
+'grid_template_columns',
+'grid_auto_flow',
+'grid_columns_grid',
+'grid_rows_grid',
+);
 
-		if ( isset( $settings['grid_columns'] ) || isset( $settings['grid_template_columns'] ) || isset( $settings['grid_auto_flow'] ) ) {
-			return true;
-		}
+foreach ( $grid_hints as $hint ) {
+if ( isset( $settings[ $hint ] ) && '' !== $settings[ $hint ] ) {
+return true;
+}
+}
 
-		if ( isset( $settings['grid_row_gap'] ) || isset( $settings['gap_rows'] ) ) {
-			return true;
-		}
-
-		if ( $child_count > 4 ) {
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
-	 * Determine whether we should render a container as columns.
-	 *
-	 * @param array $element  Elementor container element.
-	 * @param array $children Children elements.
-	 *
-	 * @return bool
-	 */
-	public static function should_render_columns( array $element, array $children ): bool {
-		$child_count = count( $children );
-		if ( $child_count < 2 || $child_count > 4 ) {
-			return false;
-		}
-
-		if ( self::is_grid( $element ) ) {
-			return false;
-		}
-
-		$settings = $element['settings'] ?? array();
-		$direction = self::get_flex_direction( $settings );
-		if ( 'column' === $direction || 'column-reverse' === $direction ) {
-			return false;
-		}
-
-		$wrap = $settings['flex_wrap'] ?? $settings['flex_wrap_mobile'] ?? '';
-		if ( in_array( $wrap, array( 'wrap', 'wrap-reverse' ), true ) && $child_count > 3 ) {
-			return false;
-		}
-
-		return true;
-	}
+return $child_count > 4;
+}
 
 	/**
 	 * Infer a grid column count from Elementor settings.
@@ -87,40 +53,74 @@ class Container_Classifier {
 	 *
 	 * @return int
 	 */
-	public static function get_grid_column_count( array $element, int $child_count ): int {
-		$settings = $element['settings'] ?? array();
-		$possible_keys = array( 'grid_columns', 'columns', 'grid_columns_number', 'grid_template_columns' );
+public static function get_grid_column_count( array $element, int $child_count ): int {
+$child_count = max( 1, $child_count );
+$settings    = is_array( $element['settings'] ?? null ) ? $element['settings'] : array();
 
-		foreach ( $possible_keys as $key ) {
-			if ( empty( $settings[ $key ] ) ) {
-				continue;
-			}
+if ( isset( $settings['grid_columns_grid'] ) && is_array( $settings['grid_columns_grid'] ) ) {
+$size = $settings['grid_columns_grid']['size'] ?? null;
+if ( is_numeric( $size ) ) {
+return self::clamp_columns( (int) $size, $child_count );
+}
+}
 
-			$value = $settings[ $key ];
-			if ( is_array( $value ) ) {
-				$value = $value['size'] ?? reset( $value );
-			}
+$numeric_keys = array( 'grid_columns', 'columns', 'grid_columns_number' );
+foreach ( $numeric_keys as $key ) {
+$value = $settings[ $key ] ?? null;
+if ( null === $value || '' === $value ) {
+continue;
+}
 
-			$value = (int) $value;
-			if ( $value > 0 ) {
-				return min( max( 1, $value ), max( 1, $child_count ) );
-			}
-		}
+if ( is_array( $value ) ) {
+$value = $value['size'] ?? $value['value'] ?? null;
+}
 
-		if ( $child_count >= 4 ) {
-			return 4;
-		}
+if ( is_numeric( $value ) ) {
+return self::clamp_columns( (int) $value, $child_count );
+}
+}
 
-		if ( $child_count >= 3 ) {
-			return 3;
-		}
+$template = $settings['grid_template_columns'] ?? '';
+if ( is_string( $template ) && '' !== trim( $template ) ) {
+$template = strtolower( $template );
+if ( preg_match( '/repeat\((\d+)/', $template, $matches ) ) {
+return self::clamp_columns( (int) $matches[1], $child_count );
+}
+$columns = preg_split( '/\s+/', trim( $template ) );
+if ( is_array( $columns ) && count( $columns ) > 1 ) {
+return self::clamp_columns( count( $columns ), $child_count );
+}
+}
 
-		if ( $child_count > 0 ) {
-			return $child_count;
-		}
+return min( 4, $child_count );
+}
 
-		return 1;
-	}
+/**
+ * Determine if a container should be rendered as a flex row.
+ *
+ * @param array $element     Elementor container element.
+ * @param int   $child_count Number of child elements.
+ */
+public static function is_row( array $element, int $child_count ): bool {
+if ( $child_count < 2 || $child_count > 4 ) {
+return false;
+}
+
+if ( self::is_grid( $element ) ) {
+return false;
+}
+
+$settings   = is_array( $element['settings'] ?? null ) ? $element['settings'] : array();
+$direction  = self::get_flex_direction( $settings );
+$has_row    = in_array( $direction, array( 'row', 'row-reverse' ), true );
+$wrap_value = strtolower( (string) ( $settings['flex_wrap'] ?? $settings['flex_wrap_tablet'] ?? $settings['flex_wrap_mobile'] ?? '' ) );
+
+if ( $has_row ) {
+return true;
+}
+
+return '' === $direction && ( '' === $wrap_value || 'nowrap' !== $wrap_value );
+}
 
 	/**
 	 * Get the flex direction configured for a container.
@@ -129,14 +129,27 @@ class Container_Classifier {
 	 *
 	 * @return string
 	 */
-	public static function get_flex_direction( array $settings ): string {
-		$direction = $settings['flex_direction'] ?? $settings['direction'] ?? '';
+public static function get_flex_direction( array $settings ): string {
+$direction = $settings['flex_direction'] ?? $settings['direction'] ?? '';
+$direction = is_string( $direction ) ? strtolower( $direction ) : '';
 
-		$valid = array( 'row', 'row-reverse', 'column', 'column-reverse' );
-		if ( in_array( $direction, $valid, true ) ) {
-			return $direction;
-		}
+$valid = array( 'row', 'row-reverse', 'column', 'column-reverse' );
+if ( in_array( $direction, $valid, true ) ) {
+return $direction;
+}
 
-		return 'row';
-	}
+return '';
+}
+
+/**
+ * Clamp inferred column counts to sane limits.
+ *
+ * @param int $columns     Desired column count.
+ * @param int $child_count Total children.
+ */
+private static function clamp_columns( int $columns, int $child_count ): int {
+$columns = max( 1, $columns );
+$columns = min( $columns, $child_count );
+return max( 1, $columns );
+}
 }

@@ -7,10 +7,6 @@
 
 namespace Progressus\Gutenberg\Admin\Helper;
 
-use function esc_attr;
-use function sanitize_html_class;
-use function wp_json_encode;
-
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -22,7 +18,7 @@ class Block_Builder {
 	 *
 	 * @var array<string>
 	 */
-	private static $wrapper_blocks = array( 'group', 'columns', 'column' );
+private static $wrapper_blocks = array( 'group', 'columns', 'column', 'buttons', 'button' );
 
 	/**
 	 * Build the serialized markup for a block including wrapper markup when required.
@@ -33,31 +29,29 @@ class Block_Builder {
 	 *
 	 * @return string
 	 */
-	public static function build( string $block, array $attrs, string $inner_html ): string {
-		$attr_json = '';
-		if ( ! empty( $attrs ) ) {
-			$attr_json = ' ' . wp_json_encode( $attrs );
-		}
+public static function build( string $block, array $attrs, string $inner_html ): string {
+$attrs        = self::normalize_attributes( $attrs );
+$attr_json    = empty( $attrs ) ? '' : ' ' . wp_json_encode( $attrs );
+$opening      = sprintf( '<!-- wp:%s%s -->', $block, $attr_json );
+$closing      = sprintf( '<!-- /wp:%s -->', $block );
+$block_slug   = self::get_block_slug( $block );
+$is_wrapper   = in_array( $block_slug, self::$wrapper_blocks, true );
+$style_attr   = '';
+$wrapper_html = $inner_html;
 
-		$opening_comment = sprintf( '<!-- wp:%s%s -->', $block, $attr_json );
-		$closing_comment = sprintf( '<!-- /wp:%s -->', $block );
+if ( $is_wrapper ) {
+$wrapper_class = self::build_wrapper_class( $block_slug, $attrs );
+$style_attr    = self::build_style_attribute( $attrs );
+$wrapper_html  = sprintf(
+'<div class="%s"%s>%s</div>',
+esc_attr( $wrapper_class ),
+$style_attr,
+$inner_html
+);
+}
 
-		if ( in_array( $block, self::$wrapper_blocks, true ) ) {
-			$wrapper_class = self::build_wrapper_class( $block, $attrs );
-			$style_attr    = self::build_style_attribute( $attrs );
-
-			$wrapper = sprintf(
-				'<div class="%s"%s>%s</div>',
-				esc_attr( $wrapper_class ),
-				$style_attr,
-				$inner_html
-			);
-
-			return $opening_comment . $wrapper . $closing_comment . "\n";
-		}
-
-		return $opening_comment . $inner_html . $closing_comment . "\n";
-	}
+return $opening . $wrapper_html . $closing . "\n";
+}
 
 	/**
 	 * Build the wrapper class attribute from block attributes.
@@ -67,10 +61,10 @@ class Block_Builder {
 	 *
 	 * @return string
 	 */
-	private static function build_wrapper_class( string $block, array $attrs ): string {
-		$classes   = array( 'wp-block-' . $block );
-		$align     = isset( $attrs['align'] ) ? trim( (string) $attrs['align'] ) : '';
-		$class_raw = isset( $attrs['className'] ) ? (string) $attrs['className'] : '';
+private static function build_wrapper_class( string $block_slug, array $attrs ): string {
+$classes   = array( 'wp-block-' . $block_slug );
+$align     = isset( $attrs['align'] ) ? trim( (string) $attrs['align'] ) : '';
+$class_raw = isset( $attrs['className'] ) ? (string) $attrs['className'] : '';
 
 		if ( '' !== $align ) {
 			$classes[] = 'align' . sanitize_html_class( $align );
@@ -98,70 +92,167 @@ class Block_Builder {
 	 *
 	 * @return string
 	 */
-	private static function build_style_attribute( array $attrs ): string {
-		if ( empty( $attrs['style'] ) || ! is_array( $attrs['style'] ) ) {
-			return '';
-		}
+private static function build_style_attribute( array $attrs ): string {
+if ( empty( $attrs['style'] ) || ! is_array( $attrs['style'] ) ) {
+return '';
+}
 
-		$styles = array();
-		$style  = $attrs['style'];
+$style       = $attrs['style'];
+$style_rules = array();
 
-		if ( isset( $style['spacing']['blockGap'] ) ) {
-			$styles[] = 'gap:' . self::normalize_style_value( $style['spacing']['blockGap'] );
-		}
+if ( ! empty( $style['spacing']['blockGap'] ) ) {
+$style_rules[] = 'gap:' . self::normalize_style_value( $style['spacing']['blockGap'] );
+}
 
-		foreach ( array( 'padding', 'margin' ) as $box_type ) {
-			if ( empty( $style['spacing'][ $box_type ] ) || ! is_array( $style['spacing'][ $box_type ] ) ) {
-				continue;
-			}
+foreach ( array( 'padding', 'margin' ) as $type ) {
+if ( empty( $style['spacing'][ $type ] ) || ! is_array( $style['spacing'][ $type ] ) ) {
+continue;
+}
 
-			foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
-				if ( ! isset( $style['spacing'][ $box_type ][ $side ] ) ) {
-					continue;
-				}
+foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+if ( empty( $style['spacing'][ $type ][ $side ] ) ) {
+continue;
+}
 
-				$value = $style['spacing'][ $box_type ][ $side ];
-				if ( '' === $value ) {
-					continue;
-				}
+$style_rules[] = sprintf(
+'%s-%s:%s',
+$type,
+$side,
+self::normalize_style_value( $style['spacing'][ $type ][ $side ] )
+);
+}
+}
 
-				$styles[] = sprintf(
-					'%s-%s:%s',
-					$box_type,
-					$side,
-					self::normalize_style_value( $value )
-				);
-			}
-		}
+if ( ! empty( $style['color']['background'] ) ) {
+$style_rules[] = 'background-color:' . self::normalize_style_value( $style['color']['background'] );
+}
 
-		if ( isset( $style['color']['background'] ) && '' !== $style['color']['background'] ) {
-			$styles[] = 'background-color:' . self::normalize_style_value( $style['color']['background'] );
-		}
+if ( ! empty( $style['typography'] ) && is_array( $style['typography'] ) ) {
+foreach ( $style['typography'] as $property => $value ) {
+if ( '' === $value ) {
+continue;
+}
+$style_rules[] = sprintf( '%s:%s', self::camel_to_kebab( $property ), self::normalize_style_value( $value ) );
+}
+}
 
-		if ( empty( $styles ) ) {
-			return '';
-		}
+if ( ! empty( $style['border'] ) && is_array( $style['border'] ) ) {
+$style_rules = array_merge( $style_rules, self::build_border_rules( $style['border'] ) );
+}
 
-		return ' style="' . esc_attr( implode( ';', $styles ) ) . '"';
-	}
+if ( empty( $style_rules ) ) {
+return '';
+}
 
-	/**
-	 * Normalize style values for inline usage (e.g. presets to CSS vars).
-	 *
-	 * @param string $value Raw value from attributes.
-	 *
-	 * @return string
-	 */
-	private static function normalize_style_value( $value ): string {
-		$value = (string) $value;
-		if ( 0 === strpos( $value, 'var:' ) ) {
-			$without_prefix = substr( $value, 4 );
-			$parts          = explode( '|', $without_prefix );
-			if ( ! empty( $parts ) ) {
-				$value = 'var(--wp--' . implode( '--', array_map( 'sanitize_html_class', $parts ) ) . ')';
-			}
-		}
+return ' style="' . esc_attr( implode( ';', $style_rules ) ) . '"';
+}
 
-		return $value;
-	}
+/**
+ * Normalize style values for inline usage (e.g. presets to CSS vars).
+ *
+ * @param string $value Raw value from attributes.
+ *
+ * @return string
+ */
+private static function normalize_style_value( $value ): string {
+$value = (string) $value;
+if ( 0 === strpos( $value, 'var:' ) ) {
+$without_prefix = substr( $value, 4 );
+$parts          = explode( '|', $without_prefix );
+if ( ! empty( $parts ) ) {
+$value = 'var(--wp--' . implode( '--', array_map( 'sanitize_html_class', $parts ) ) . ')';
+}
+}
+
+return $value;
+}
+
+/**
+ * Convert camelCase properties to kebab-case.
+ *
+ * @param string $property Property name.
+ */
+private static function camel_to_kebab( string $property ): string {
+return strtolower( preg_replace( '/([a-z])([A-Z])/', '$1-$2', $property ) );
+}
+
+/**
+ * Normalise attributes by removing empty values recursively.
+ *
+ * @param array $attrs Raw attributes.
+ */
+private static function normalize_attributes( array $attrs ): array {
+foreach ( $attrs as $key => $value ) {
+if ( is_array( $value ) ) {
+$attrs[ $key ] = self::normalize_attributes( $value );
+if ( empty( $attrs[ $key ] ) ) {
+unset( $attrs[ $key ] );
+}
+} elseif ( null === $value || '' === $value ) {
+unset( $attrs[ $key ] );
+}
+}
+
+return $attrs;
+}
+
+/**
+ * Extract the slug part from a block name.
+ *
+ * @param string $block Block name (e.g. core/group).
+ */
+private static function get_block_slug( string $block ): string {
+if ( false === strpos( $block, '/' ) ) {
+return $block;
+}
+
+$parts = explode( '/', $block );
+return end( $parts ) ?: $block;
+}
+
+/**
+ * Build inline CSS rules for border data.
+ *
+ * @param array $border Border attribute data.
+ */
+private static function build_border_rules( array $border ): array {
+$rules = array();
+
+if ( ! empty( $border['style'] ) ) {
+$rules[] = 'border-style:' . self::normalize_style_value( $border['style'] );
+}
+
+if ( ! empty( $border['radius'] ) && is_array( $border['radius'] ) ) {
+$map = array(
+'topLeft'     => 'border-top-left-radius',
+'topRight'    => 'border-top-right-radius',
+'bottomRight' => 'border-bottom-right-radius',
+'bottomLeft'  => 'border-bottom-left-radius',
+);
+
+foreach ( $map as $key => $property ) {
+if ( empty( $border['radius'][ $key ] ) ) {
+continue;
+}
+
+$rules[] = sprintf( '%s:%s', $property, self::normalize_style_value( $border['radius'][ $key ] ) );
+}
+}
+
+foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+if ( empty( $border[ $side ] ) || ! is_array( $border[ $side ] ) ) {
+continue;
+}
+
+if ( ! empty( $border[ $side ]['width'] ) ) {
+$rules[] = sprintf( 'border-%s-width:%s', $side, self::normalize_style_value( $border[ $side ]['width'] ) );
+}
+
+if ( ! empty( $border[ $side ]['color'] ) ) {
+$rules[] = sprintf( 'border-%s-color:%s', $side, self::normalize_style_value( $border[ $side ]['color'] ) );
+}
+}
+
+return $rules;
+}
 }
