@@ -20,21 +20,29 @@ class Container_Classifier {
 	 *
 	 * @return bool
 	 */
-	public static function is_grid( array $element ): bool {
-		$settings = $element['settings'] ?? array();
-		$child_count = isset( $element['elements'] ) && is_array( $element['elements'] ) ? count( $element['elements'] ) : 0;
+        public static function is_grid( array $element ): bool {
+                $settings    = $element['settings'] ?? array();
+                $child_count = isset( $element['elements'] ) && is_array( $element['elements'] ) ? count( $element['elements'] ) : 0;
 
-		if ( isset( $settings['layout'] ) && 'grid' === $settings['layout'] ) {
-			return true;
-		}
+                if ( isset( $settings['container_type'] ) && 'grid' === $settings['container_type'] ) {
+                        return true; // Elementor “simple” export
+                }
+
+                if ( isset( $settings['layout'] ) && 'grid' === $settings['layout'] ) {
+                        return true;
+                }
 
 		if ( isset( $settings['display'] ) && 'grid' === $settings['display'] ) {
 			return true;
 		}
 
-		if ( isset( $settings['grid_columns'] ) || isset( $settings['grid_template_columns'] ) || isset( $settings['grid_auto_flow'] ) ) {
-			return true;
-		}
+                if ( isset( $settings['grid_columns'] ) || isset( $settings['grid_template_columns'] ) || isset( $settings['grid_auto_flow'] ) ) {
+                        return true;
+                }
+
+                if ( isset( $settings['grid_columns_grid'] ) || isset( $settings['grid_rows_grid'] ) ) {
+                        return true;
+                }
 
 		if ( isset( $settings['grid_row_gap'] ) || isset( $settings['gap_rows'] ) ) {
 			return true;
@@ -88,8 +96,16 @@ class Container_Classifier {
 	 * @return int
 	 */
 	public static function get_grid_column_count( array $element, int $child_count ): int {
-		$settings = $element['settings'] ?? array();
-		$possible_keys = array( 'grid_columns', 'columns', 'grid_columns_number', 'grid_template_columns' );
+                $settings = $element['settings'] ?? array();
+
+                if ( ! empty( $settings['grid_columns_grid'] ) && is_array( $settings['grid_columns_grid'] ) ) {
+                        $val = (int) ( $settings['grid_columns_grid']['size'] ?? 0 );
+                        if ( $val > 0 ) {
+                                return min( max( 1, $val ), max( 1, $child_count ) );
+                        }
+                }
+
+                $possible_keys = array( 'grid_columns', 'columns', 'grid_columns_number', 'grid_template_columns' );
 
 		foreach ( $possible_keys as $key ) {
 			if ( empty( $settings[ $key ] ) ) {

@@ -98,52 +98,64 @@ class Block_Builder {
 	 *
 	 * @return string
 	 */
-	private static function build_style_attribute( array $attrs ): string {
-		if ( empty( $attrs['style'] ) || ! is_array( $attrs['style'] ) ) {
-			return '';
-		}
+        private static function build_style_attribute( array $attrs ): string {
+                if ( empty( $attrs['style'] ) || ! is_array( $attrs['style'] ) ) {
+                        return '';
+                }
 
-		$styles = array();
-		$style  = $attrs['style'];
+                $style_tree = $attrs['style'];
+                $styles     = array();
 
-		if ( isset( $style['spacing']['blockGap'] ) ) {
-			$styles[] = 'gap:' . self::normalize_style_value( $style['spacing']['blockGap'] );
-		}
+                if ( isset( $style_tree['spacing']['blockGap'] ) ) {
+                        $gap_value = self::coerce_style_scalar( $style_tree['spacing']['blockGap'] );
+                        $gap_value = self::normalize_style_value( $gap_value );
+                        if ( '' !== $gap_value ) {
+                                $styles[] = 'gap:' . $gap_value;
+                        }
+                }
 
-		foreach ( array( 'padding', 'margin' ) as $box_type ) {
-			if ( empty( $style['spacing'][ $box_type ] ) || ! is_array( $style['spacing'][ $box_type ] ) ) {
-				continue;
-			}
+                foreach ( array( 'padding', 'margin' ) as $box_type ) {
+                        if ( empty( $style_tree['spacing'][ $box_type ] ) || ! is_array( $style_tree['spacing'][ $box_type ] ) ) {
+                                continue;
+                        }
 
-			foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
-				if ( ! isset( $style['spacing'][ $box_type ][ $side ] ) ) {
-					continue;
-				}
+                        foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+                                if ( ! isset( $style_tree['spacing'][ $box_type ][ $side ] ) ) {
+                                        continue;
+                                }
 
-				$value = $style['spacing'][ $box_type ][ $side ];
-				if ( '' === $value ) {
-					continue;
-				}
+                                $value = self::coerce_style_scalar( $style_tree['spacing'][ $box_type ][ $side ] );
+                                if ( '' === $value ) {
+                                        continue;
+                                }
 
-				$styles[] = sprintf(
-					'%s-%s:%s',
-					$box_type,
-					$side,
-					self::normalize_style_value( $value )
-				);
-			}
-		}
+                                $normalized = self::normalize_style_value( $value );
+                                if ( '' === $normalized ) {
+                                        continue;
+                                }
 
-		if ( isset( $style['color']['background'] ) && '' !== $style['color']['background'] ) {
-			$styles[] = 'background-color:' . self::normalize_style_value( $style['color']['background'] );
-		}
+                                $styles[] = sprintf(
+                                        '%s-%s:%s',
+                                        $box_type,
+                                        $side,
+                                        $normalized
+                                );
+                        }
+                }
 
-		if ( empty( $styles ) ) {
-			return '';
-		}
+                if ( isset( $style_tree['color']['background'] ) ) {
+                        $background = self::normalize_style_value( $style_tree['color']['background'] );
+                        if ( '' !== $background ) {
+                                $styles[] = 'background-color:' . $background;
+                        }
+                }
 
-		return ' style="' . esc_attr( implode( ';', $styles ) ) . '"';
-	}
+                if ( empty( $styles ) ) {
+                        return '';
+                }
+
+                return ' style="' . esc_attr( implode( ';', $styles ) ) . '"';
+        }
 
 	/**
 	 * Normalize style values for inline usage (e.g. presets to CSS vars).
@@ -152,16 +164,52 @@ class Block_Builder {
 	 *
 	 * @return string
 	 */
-	private static function normalize_style_value( $value ): string {
-		$value = (string) $value;
-		if ( 0 === strpos( $value, 'var:' ) ) {
-			$without_prefix = substr( $value, 4 );
-			$parts          = explode( '|', $without_prefix );
-			if ( ! empty( $parts ) ) {
-				$value = 'var(--wp--' . implode( '--', array_map( 'sanitize_html_class', $parts ) ) . ')';
-			}
-		}
+        private static function normalize_style_value( $value ): string {
+                $value = self::coerce_style_scalar( $value );
+                if ( '' === $value ) {
+                        return '';
+                }
 
-		return $value;
-	}
+                if ( 0 === strpos( $value, 'var:' ) ) {
+                        $without_prefix = substr( $value, 4 );
+                        $parts          = explode( '|', $without_prefix );
+                        if ( ! empty( $parts ) ) {
+                                $value = 'var(--wp--' . implode( '--', array_map( 'sanitize_html_class', $parts ) ) . ')';
+                        }
+                }
+
+                return $value;
+        }
+
+        /**
+         * Convert style values that may be arrays into scalars.
+         *
+         * @param mixed $value Raw value.
+         *
+         * @return string
+         */
+        private static function coerce_style_scalar( $value ): string {
+                if ( is_array( $value ) ) {
+                        if ( isset( $value['value'] ) && '' !== $value['value'] ) {
+                                $value = $value['value'];
+                        } elseif ( isset( $value['size'] ) && '' !== $value['size'] ) {
+                                $unit = isset( $value['unit'] ) && is_string( $value['unit'] ) ? $value['unit'] : '';
+                                $size = is_numeric( $value['size'] ) ? (string) $value['size'] : trim( (string) $value['size'] );
+                                if ( '' === $size ) {
+                                        return '';
+                                }
+                                $value = $size . $unit;
+                        } elseif ( isset( $value['top'] ) && '' !== $value['top'] ) {
+                                $value = $value['top'];
+                        } else {
+                                return '';
+                        }
+                }
+
+                if ( is_scalar( $value ) ) {
+                        return trim( (string) $value );
+                }
+
+                return '';
+        }
 }
