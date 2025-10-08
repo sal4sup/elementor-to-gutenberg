@@ -106,9 +106,9 @@ $anchor_attributes .= '' !== $link ? ' href="' . esc_url( $link ) . '"' : '';
 
 $anchor_html = sprintf( '<a%s>%s</a>', $anchor_attributes, wp_kses_post( $text ) );
 
-$button_block = Block_Builder::build( 'core/button', $button_attributes, $anchor_html );
+        $button_block = Block_Builder::build( 'button', $button_attributes, $anchor_html );
 
-return Block_Builder::build( 'core/buttons', array(), $button_block );
+        return Block_Builder::build( 'buttons', array(), $button_block );
 }
 
 /**

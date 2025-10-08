@@ -1,22 +1,11 @@
 <?php
-// Minimal WordPress function stubs for testing.
-if ( ! function_exists( 'esc_attr' ) ) {
-function esc_attr( $text ) {
+if ( ! function_exists( 'esc_html' ) ) {
+function esc_html( $text ) {
 return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
 }
 }
-if ( ! function_exists( 'esc_url' ) ) {
-function esc_url( $url ) {
-return filter_var( $url, FILTER_SANITIZE_URL );
-}
-}
-if ( ! function_exists( 'esc_url_raw' ) ) {
-function esc_url_raw( $url ) {
-return filter_var( $url, FILTER_SANITIZE_URL );
-}
-}
-if ( ! function_exists( 'esc_html' ) ) {
-function esc_html( $text ) {
+if ( ! function_exists( 'esc_attr' ) ) {
+function esc_attr( $text ) {
 return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
 }
 }
@@ -40,6 +29,11 @@ function wp_kses_post( $content ) {
 return (string) $content;
 }
 }
+if ( ! function_exists( 'esc_url' ) ) {
+function esc_url( $url ) {
+return (string) $url;
+}
+}
 if ( ! function_exists( 'sanitize_text_field' ) ) {
 function sanitize_text_field( $text ) {
 return trim( (string) $text );
@@ -60,6 +54,69 @@ function wp_update_custom_css_post( $css ) { // phpcs:ignore Generic.CodeAnalysi
 return true;
 }
 }
+if ( ! function_exists( 'add_action' ) ) {
+function add_action( $hook, $callback, $priority = 10, $args = 1 ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+}
+}
+if ( ! function_exists( 'add_filter' ) ) {
+function add_filter( $hook, $callback, $priority = 10, $args = 1 ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+}
+}
+if ( ! function_exists( 'add_menu_page' ) ) {
+function add_menu_page() {}
+}
+if ( ! function_exists( 'register_setting' ) ) {
+function register_setting() {}
+}
+if ( ! function_exists( 'add_settings_section' ) ) {
+function add_settings_section() {}
+}
+if ( ! function_exists( 'add_settings_field' ) ) {
+function add_settings_field() {}
+}
+if ( ! function_exists( 'admin_url' ) ) {
+function admin_url( $path = '' ) {
+return $path;
+}
+}
+if ( ! function_exists( 'wp_nonce_url' ) ) {
+function wp_nonce_url( $url, $nonce = '' ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+return $url;
+}
+}
+if ( ! function_exists( 'check_admin_referer' ) ) {
+function check_admin_referer() {}
+}
+if ( ! function_exists( 'wp_safe_redirect' ) ) {
+function wp_safe_redirect( $location ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+return true;
+}
+}
+if ( ! function_exists( 'wp_die' ) ) {
+function wp_die( $message = '' ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter
+throw new RuntimeException( 'wp_die called' );
+}
+}
+if ( ! function_exists( 'get_the_title' ) ) {
+function get_the_title() {
+return 'Sample';
+}
+}
+if ( ! function_exists( 'get_post_meta' ) ) {
+function get_post_meta() {
+return '';
+}
+}
+if ( ! function_exists( 'wp_insert_post' ) ) {
+function wp_insert_post() {
+return 0;
+}
+}
+if ( ! function_exists( 'wp_update_post' ) ) {
+function wp_update_post() {
+return 0;
+}
+}
 
 echo "Running conversion smoke tests...\n";
 
@@ -76,16 +133,18 @@ require_once __DIR__ . '/../src/admin/widget/class-heading-widget-handler.php';
 require_once __DIR__ . '/../src/admin/widget/class-text-editor-widget-handler.php';
 require_once __DIR__ . '/../src/admin/widget/class-button-widget-handler.php';
 require_once __DIR__ . '/../src/admin/widget/class-image-widget-handler.php';
+require_once __DIR__ . '/../src/admin/widget/class-icon-box-widget-handler.php';
+require_once __DIR__ . '/../src/admin/widget/class-icon-list-widget-handler.php';
+require_once __DIR__ . '/../src/admin/widget/class-image-box-widget-handler.php';
+require_once __DIR__ . '/../src/admin/widget/class-testimonial-widget-handler.php';
+require_once __DIR__ . '/../src/admin/widget/class-social-icon-widget-handler.php';
+require_once __DIR__ . '/../src/admin/widget/class-nested-tabs-widget-handler.php';
 require_once __DIR__ . '/../src/admin/helper/class-file-upload-service.php';
 require_once __DIR__ . '/../src/admin/class-admin-settings.php';
 
 use Progressus\Gutenberg\Admin\Admin_Settings;
 
-class Test_Admin_Settings extends Admin_Settings {
-public function __construct() {}
-}
-
-$converter = new Test_Admin_Settings();
+$converter = Admin_Settings::instance();
 
 /**
  * Simple assertion helper.
@@ -138,10 +197,10 @@ array(
 );
 
 $simple_output = $converter->parse_elementor_elements( $simple_grid );
-expect_true( str_contains( $simple_output, '<!-- wp:core/group {"layout":{"type":"grid","columnCount":3}} -->' ), 'Expected grid group layout comment missing.' );
-expect_true( str_contains( $simple_output, '<!-- wp:core/heading' ), 'Heading block missing from simple grid.' );
-expect_true( str_contains( $simple_output, '<!-- wp:core/image' ), 'Image block missing from simple grid.' );
-expect_true( str_contains( $simple_output, '<!-- wp:core/buttons' ), 'Buttons block missing from simple grid.' );
+expect_true( str_contains( $simple_output, '<!-- wp:group {"layout":{"type":"grid","columnCount":3}} -->' ), 'Expected grid group layout comment missing.' );
+expect_true( str_contains( $simple_output, '<!-- wp:heading' ), 'Heading block missing from simple grid.' );
+expect_true( str_contains( $simple_output, '<!-- wp:image' ), 'Image block missing from simple grid.' );
+expect_true( str_contains( $simple_output, '<!-- wp:buttons' ), 'Buttons block missing from simple grid.' );
 
 $complex_grid = array(
 array(
@@ -167,6 +226,125 @@ range( 1, 5 )
 
 $complex_output = $converter->parse_elementor_elements( $complex_grid );
 expect_true( str_contains( $complex_output, '"layout":{"type":"grid","columnCount":3}' ), 'Grid column count not detected for complex grid.' );
-expect_true( substr_count( $complex_output, '<!-- wp:core/heading' ) === 5, 'Expected five heading blocks in complex grid.' );
+expect_true( substr_count( $complex_output, '<!-- wp:heading' ) === 5, 'Expected five heading blocks in complex grid.' );
+
+$text_elements = array(
+array(
+'elType'     => 'widget',
+'widgetType' => 'text-editor',
+'settings'   => array(
+'editor'     => 'Plain text paragraph',
+'text_color' => '#333333',
+),
+),
+);
+
+$plain_output = $converter->parse_elementor_elements( $text_elements );
+expect_true( str_contains( $plain_output, '<!-- wp:paragraph' ), 'Plain text should render as paragraph.' );
+expect_true( ! str_contains( $plain_output, '<!-- wp:html' ), 'Plain text should not render as HTML block.' );
+
+$html_elements = array(
+array(
+'elType'     => 'widget',
+'widgetType' => 'text-editor',
+'settings'   => array(
+'editor' => '<p><span style="color:red">Rich</span> content</p>',
+),
+),
+);
+
+$html_output = $converter->parse_elementor_elements( $html_elements );
+expect_true( str_contains( $html_output, '<!-- wp:html -->' ), 'Complex HTML should render as HTML block.' );
+expect_true( ! str_contains( $html_output, '<!-- wp:html {' ), 'HTML block should not include attributes.' );
+
+$image_box = array(
+array(
+'elType'     => 'widget',
+'widgetType' => 'image-box',
+'settings'   => array(
+'image'            => array( 'url' => 'https://example.com/card.jpg', 'alt' => 'Card' ),
+'title_text'       => 'Card Title',
+'description_text' => 'Card description.',
+),
+),
+);
+
+$image_box_output = $converter->parse_elementor_elements( $image_box );
+expect_true( str_contains( $image_box_output, '<!-- wp:image' ), 'Image box should render an image block.' );
+expect_true( str_contains( $image_box_output, '<!-- wp:heading' ), 'Image box should render a heading block.' );
+expect_true( str_contains( $image_box_output, '<!-- wp:paragraph' ), 'Image box should render a paragraph block.' );
+
+$testimonials = array(
+array(
+'elType'   => 'container',
+'settings' => array(),
+'elements' => array_map(
+static function ( $i ) {
+return array(
+'elType'     => 'widget',
+'widgetType' => 'testimonial',
+'settings'   => array(
+'testimonial_content' => 'Testimonial ' . $i,
+'testimonial_name'    => 'Person ' . $i,
+),
+);
+},
+range( 1, 3 )
+),
+),
+);
+
+$testimonials_output = $converter->parse_elementor_elements( $testimonials );
+expect_true( str_contains( $testimonials_output, '"layout":{"type":"grid","columnCount":3}' ), 'Testimonials should form a three-column grid.' );
+
+$social_icons = array(
+array(
+'elType'     => 'widget',
+'widgetType' => 'social-icons',
+'settings'   => array(
+'social_icon_list' => array(
+array(
+'social_icon' => array( 'value' => 'fab fa-facebook' ),
+'link'        => array( 'url' => 'https://facebook.com/example' ),
+),
+array(
+'social_icon' => array( 'value' => 'fab fa-twitter' ),
+'link'        => array( 'url' => 'https://twitter.com/example' ),
+),
+),
+),
+),
+);
+
+$social_output = $converter->parse_elementor_elements( $social_icons );
+expect_true( str_contains( $social_output, '<!-- wp:social-links' ), 'Social icons should produce a social-links block.' );
+expect_true( str_contains( $social_output, '"service":"facebook"' ), 'Facebook service should be detected.' );
+
+$nested_tabs = array(
+array(
+'elType'     => 'widget',
+'widgetType' => 'nested-tabs',
+'settings'   => array(
+'tabs' => array(
+array(
+'tab_title'   => 'First Tab',
+'tab_content' => array(
+array(
+'elType'     => 'widget',
+'widgetType' => 'heading',
+'settings'   => array(
+'title'       => 'Nested Heading',
+'header_size' => 'h3',
+),
+),
+),
+),
+),
+),
+),
+);
+
+$nested_output = $converter->parse_elementor_elements( $nested_tabs );
+expect_true( str_contains( $nested_output, '<!-- wp:heading' ), 'Nested tabs should render inner heading blocks.' );
 
 echo "All conversion smoke tests passed\n";

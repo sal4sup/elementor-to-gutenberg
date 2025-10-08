@@ -126,7 +126,7 @@ if ( '' !== $custom_css ) {
 Style_Parser::save_custom_css( $custom_css );
 }
 
-return Block_Builder::build( 'core/heading', $attributes, $heading_markup );
+        return Block_Builder::build( 'heading', $attributes, $heading_markup );
 }
 
 /**

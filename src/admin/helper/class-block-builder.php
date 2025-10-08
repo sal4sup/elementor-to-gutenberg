@@ -18,7 +18,7 @@ class Block_Builder {
 	 *
 	 * @var array<string>
 	 */
-private static $wrapper_blocks = array( 'group', 'columns', 'column', 'buttons', 'button' );
+    private static $wrapper_blocks = array( 'group', 'columns', 'column', 'buttons', 'button' );
 
 	/**
 	 * Build the serialized markup for a block including wrapper markup when required.
@@ -29,29 +29,32 @@ private static $wrapper_blocks = array( 'group', 'columns', 'column', 'buttons',
 	 *
 	 * @return string
 	 */
-public static function build( string $block, array $attrs, string $inner_html ): string {
-$attrs        = self::normalize_attributes( $attrs );
-$attr_json    = empty( $attrs ) ? '' : ' ' . wp_json_encode( $attrs );
-$opening      = sprintf( '<!-- wp:%s%s -->', $block, $attr_json );
-$closing      = sprintf( '<!-- /wp:%s -->', $block );
-$block_slug   = self::get_block_slug( $block );
-$is_wrapper   = in_array( $block_slug, self::$wrapper_blocks, true );
-$style_attr   = '';
-$wrapper_html = $inner_html;
+    public static function build( string $block, array $attrs, string $inner_html ): string {
+        if ( 'html' === $block ) {
+            $attrs = array();
+        }
 
-if ( $is_wrapper ) {
-$wrapper_class = self::build_wrapper_class( $block_slug, $attrs );
-$style_attr    = self::build_style_attribute( $attrs );
-$wrapper_html  = sprintf(
-'<div class="%s"%s>%s</div>',
-esc_attr( $wrapper_class ),
-$style_attr,
-$inner_html
-);
-}
+        $attrs        = self::normalize_attributes( $attrs );
+        $attr_json    = empty( $attrs ) ? '' : ' ' . wp_json_encode( $attrs );
+        $opening      = sprintf( '<!-- wp:%s%s -->', $block, $attr_json );
+        $closing      = sprintf( '<!-- /wp:%s -->', $block );
+        $block_slug   = self::get_block_slug( $block );
+        $is_wrapper   = in_array( $block_slug, self::$wrapper_blocks, true );
+        $wrapper_html = $inner_html;
 
-return $opening . $wrapper_html . $closing . "\n";
-}
+        if ( $is_wrapper ) {
+            $wrapper_class = self::build_wrapper_class( $block_slug, $attrs );
+            $style_attr    = self::build_style_attribute( $attrs );
+            $wrapper_html  = sprintf(
+                '<div class="%s"%s>%s</div>',
+                esc_attr( $wrapper_class ),
+                $style_attr,
+                $inner_html
+            );
+        }
+
+        return $opening . $wrapper_html . $closing . "\n";
+    }
 
 	/**
 	 * Build the wrapper class attribute from block attributes.

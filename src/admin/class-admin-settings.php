@@ -366,7 +366,7 @@ private function render_group( array $attributes, array $child_blocks ): string 
 $attributes['layout'] = array( 'type' => 'constrained' );
 $inner_html           = implode( '', $child_blocks );
 
-return Block_Builder::build( 'core/group', $attributes, $inner_html );
+        return Block_Builder::build( 'group', $attributes, $inner_html );
 }
 
 /**
@@ -382,7 +382,7 @@ $attributes['layout'] = array(
 'flexWrap'       => 'wrap',
 );
 
-return Block_Builder::build( 'core/group', $attributes, implode( '', $child_blocks ) );
+        return Block_Builder::build( 'group', $attributes, implode( '', $child_blocks ) );
 }
 
 /**
@@ -399,15 +399,15 @@ $attributes['layout'] = array(
 );
 
 $inner_html = '';
-foreach ( $child_blocks as $child_block ) {
-$inner_html .= Block_Builder::build(
-'core/group',
-array( 'layout' => array( 'type' => 'constrained' ) ),
-$child_block
-);
-}
+        foreach ( $child_blocks as $child_block ) {
+            $inner_html .= Block_Builder::build(
+                'group',
+                array( 'layout' => array( 'type' => 'constrained' ) ),
+                $child_block
+            );
+        }
 
-return Block_Builder::build( 'core/group', $attributes, $inner_html );
+        return Block_Builder::build( 'group', $attributes, $inner_html );
 }
 
 /**
@@ -419,10 +419,10 @@ private function render_unknown_widget( string $type ): string {
 $message = sprintf( /* translators: %s widget type */ esc_html__( 'Unknown widget: %s', 'elementor-to-gutenberg' ), esc_html( $type ) );
 $paragraph = sprintf( '<p>%s</p>', $message );
 
-return Block_Builder::build(
-'core/group',
-array( 'layout' => array( 'type' => 'constrained' ) ),
-'<!-- wp:paragraph -->' . $paragraph . '<!-- /wp:paragraph -->' . "\n"
-);
+        return Block_Builder::build(
+            'group',
+            array( 'layout' => array( 'type' => 'constrained' ) ),
+            '<!-- wp:paragraph -->' . $paragraph . '<!-- /wp:paragraph -->' . "\n"
+        );
 }
 }

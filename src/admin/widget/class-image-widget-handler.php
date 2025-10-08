@@ -142,7 +142,7 @@ if ( '' !== $custom_css ) {
 Style_Parser::save_custom_css( $custom_css );
 }
 
-return Block_Builder::build( 'core/image', $image_attrs, $figure_html );
+        return Block_Builder::build( 'image', $image_attrs, $figure_html );
 }
 
 /**
