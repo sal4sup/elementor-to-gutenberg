@@ -254,8 +254,8 @@ array(
 );
 
 $html_output = $converter->parse_elementor_elements( $html_elements );
-expect_true( str_contains( $html_output, '<!-- wp:html -->' ), 'Complex HTML should render as HTML block.' );
-expect_true( ! str_contains( $html_output, '<!-- wp:html {' ), 'HTML block should not include attributes.' );
+expect_true( str_contains( $html_output, '<!-- wp:paragraph' ), 'Complex HTML should render as a paragraph block when possible.' );
+expect_true( str_contains( $html_output, '<span style="color:red">Rich</span> content' ), 'Inline HTML should be preserved within the paragraph.' );
 
 $image_box = array(
 array(
