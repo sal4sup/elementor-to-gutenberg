@@ -1,109 +1,94 @@
 <?php
 /**
- * Widget handler for Elementor nested tabs widget.
+ * Widget handler for Elementor Nested tab widget.
  *
  * @package Progressus\Gutenberg
  */
-
 namespace Progressus\Gutenberg\Admin\Widget;
 
-use Progressus\Gutenberg\Admin\Admin_Settings;
-use Progressus\Gutenberg\Admin\Helper\Block_Builder;
-use Progressus\Gutenberg\Admin\Helper\Style_Parser;
 use Progressus\Gutenberg\Admin\Widget_Handler_Interface;
-
-use function esc_html;
+use Progressus\Gutenberg\Admin\Helper\Elementor_Elements_Parser;
 
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Widget handler for Elementor nested tabs widget.
- */
 class Nested_Tabs_Widget_Handler implements Widget_Handler_Interface {
-        /**
-         * Handle conversion of nested tabs widget.
-         *
-         * @param array $element Elementor widget data.
-         */
-        public function handle( array $element ): string {
-                $settings   = is_array( $element['settings'] ?? null ) ? $element['settings'] : array();
-                $tabs       = is_array( $settings['tabs'] ?? null ) ? $settings['tabs'] : array();
-                $custom_css = isset( $settings['custom_css'] ) ? (string) $settings['custom_css'] : '';
+	/**
+	 * Convert Elementor nested tabs widget to Gutenberg columns + custom HTML.
+	 *
+	 * Each tab is represented by a child element container whose content is
+	 * recursively parsed.
+	 *
+	 * @param array $element Elementor widget data.
+	 * @return string Gutenberg block markup.
+	 */
+	public function handle( array $element ): string {
+		$tabs = $element['elements'] ?? array();
+		if ( empty( $tabs ) || ! is_array( $tabs ) ) {
+			return '';
+		}
 
-                if ( empty( $tabs ) ) {
-                        return '';
-                }
+		$tab_titles   = array();
+		$tab_contents = array();
 
-                $tab_blocks = array();
-                foreach ( $tabs as $tab ) {
-                        if ( ! is_array( $tab ) ) {
-                                continue;
-                        }
+		foreach ( $tabs as $index => $tab ) {
+			$tab_id = 'tab-' . $index;
+			$title  = $tab['settings']['_title'] ?? 'Tab ' . ( $index + 1 );
 
-                        $tab_blocks[] = $this->render_tab_group( $tab );
-                }
+			$content = '';
+			if ( ! empty( $tab['elements'] ) ) {
+				$content = Elementor_Elements_Parser::parse( $tab['elements'] );
+			} elseif ( isset( $tab['settings']['content'] ) ) {
+				$content = wp_kses_post( $tab['settings']['content'] );
+			}
 
-                $tab_blocks = array_filter( $tab_blocks );
-                if ( empty( $tab_blocks ) ) {
-                        return '';
-                }
+			$tab_titles[] = sprintf(
+				'<button class="gb-tab-title" data-tab="%s">%s</button>',
+				esc_attr( $tab_id ),
+				esc_html( $title )
+			);
 
-                if ( '' !== $custom_css ) {
-                        Style_Parser::save_custom_css( $custom_css );
-                }
+			$tab_contents[] = sprintf(
+				'<div class="gb-tab-content" id="%s" style="display:%s;">%s</div>',
+				esc_attr( $tab_id ),
+				0 === $index ? 'block' : 'none',
+				$content
+			);
+		}
 
-                $attributes           = Style_Parser::parse_container_styles( $settings );
-                $attributes['layout'] = array( 'type' => 'constrained' );
+		$tabs_html  = '<div class="gb-tabs">';
+		$tabs_html .= '<div class="gb-tabs-nav">' . implode( '', $tab_titles ) . '</div>';
+		$tabs_html .= '<div class="gb-tabs-contents">' . implode( '', $tab_contents ) . '</div>';
+		$tabs_html .= '</div>';
 
-                return Block_Builder::build( 'group', $attributes, implode( '', $tab_blocks ) );
-        }
+		$block_content  = '<!-- wp:columns -->';
+		$block_content .= '<div class="wp-block-columns">';
+		$block_content .= '<!-- wp:column {"width":"100%"} --><div class="wp-block-column" style="flex-basis:100%">';
+		$block_content .= $tabs_html;
+		$block_content .= '</div><!-- /wp:column -->';
+		$block_content .= '</div><!-- /wp:columns -->';
 
-        /**
-         * Render a single tab section as a group block.
-         *
-         * @param array $tab Tab definition.
-         */
-        private function render_tab_group( array $tab ): string {
-                $title = isset( $tab['tab_title'] ) ? (string) $tab['tab_title'] : (string) ( $tab['title'] ?? '' );
-                $content_elements = array();
+		$block_content .= '<script>' .
+		                  'document.addEventListener("DOMContentLoaded",function(){' .
+		                  'var buttons=document.querySelectorAll(".gb-tab-title");' .
+		                  'var contents=document.querySelectorAll(".gb-tab-content");' .
+		                  'buttons.forEach(function(btn){' .
+		                  'btn.addEventListener("click",function(){' .
+		                  'buttons.forEach(function(b){b.classList.remove("active");});' .
+		                  'btn.classList.add("active");' .
+		                  'contents.forEach(function(c){c.style.display=(c.id===btn.getAttribute("data-tab"))?"block":"none";});' .
+		                  '});' .
+		                  '});' .
+		                  'if(buttons.length)buttons[0].classList.add("active");' .
+		                  '});' .
+		                  '</script>';
 
-                if ( isset( $tab['tab_content'] ) ) {
-                        if ( is_array( $tab['tab_content'] ) ) {
-                                $content_elements = $tab['tab_content'];
-                        } elseif ( is_string( $tab['tab_content'] ) ) {
-                                $content_elements = array(
-                                        array(
-                                                'elType'     => 'widget',
-                                                'widgetType' => 'text-editor',
-                                                'settings'   => array( 'editor' => $tab['tab_content'] ),
-                                        ),
-                                );
-                        }
-                }
+		$block_content .= '<style>' .
+		                  '.gb-tabs-nav { display: flex; gap: 10px; margin-bottom: 10px; }' .
+		                  '.gb-tab-title { background: #f3f3f3; border: 1px solid #ccc; padding: 8px 16px; cursor: pointer; }' .
+		                  '.gb-tab-title.active { background: #e0e0e0; font-weight: bold; }' .
+		                  '.gb-tab-content { padding: 10px; border: 1px solid #eee; }' .
+		                  '</style>';
 
-                $inner_blocks = array();
-                if ( '' !== trim( $title ) ) {
-                                $inner_blocks[] = Block_Builder::build(
-                                        'heading',
-                                        array( 'level' => 4 ),
-                                        sprintf( '<h4>%s</h4>', esc_html( $title ) )
-                                );
-                }
-
-                if ( ! empty( $content_elements ) ) {
-                        $converter = Admin_Settings::instance();
-                        $inner_blocks[] = $converter->parse_elementor_elements( $content_elements );
-                }
-
-                $inner_markup = implode( '', array_filter( $inner_blocks ) );
-                if ( '' === $inner_markup ) {
-                        return '';
-                }
-
-                return Block_Builder::build(
-                        'group',
-                        array( 'layout' => array( 'type' => 'constrained' ) ),
-                        $inner_markup
-                );
-        }
+		return $block_content;
+	}
 }
