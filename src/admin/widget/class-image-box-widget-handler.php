@@ -1,6 +1,6 @@
 <?php
 /**
- * Widget handler for Elementor icon box widget.
+ * Widget handler for Elementor image box widget.
  *
  * @package Progressus\Gutenberg
  */
@@ -12,27 +12,27 @@ use Progressus\Gutenberg\Admin\Helper\Style_Parser;
 use Progressus\Gutenberg\Admin\Widget_Handler_Interface;
 
 use function esc_attr;
-use function sanitize_html_class;
+use function esc_url;
 
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Widget handler for Elementor icon box widget.
+ * Widget handler for Elementor image box widget.
  */
-class Icon_Box_Widget_Handler implements Widget_Handler_Interface {
+class Image_Box_Widget_Handler implements Widget_Handler_Interface {
         /**
-         * Handle conversion of Elementor icon box widget.
+         * Handle conversion of Elementor image box to Gutenberg blocks.
          *
-         * @param array $element Elementor widget data.
+         * @param array $element Elementor widget element.
          */
         public function handle( array $element ): string {
                 $settings    = is_array( $element['settings'] ?? null ) ? $element['settings'] : array();
                 $custom_css  = isset( $settings['custom_css'] ) ? (string) $settings['custom_css'] : '';
                 $child_blocks = array();
 
-                $icon_block = $this->render_icon_block( $settings );
-                if ( '' !== $icon_block ) {
-                        $child_blocks[] = $icon_block;
+                $image_block = $this->render_image_block( $settings );
+                if ( '' !== $image_block ) {
+                        $child_blocks[] = $image_block;
                 }
 
                 $heading_block = $this->render_heading_block( $settings );
@@ -53,90 +53,63 @@ class Icon_Box_Widget_Handler implements Widget_Handler_Interface {
                         Style_Parser::save_custom_css( $custom_css );
                 }
 
-                $attributes           = Style_Parser::parse_container_styles( $settings );
-                $attributes['layout'] = array( 'type' => 'constrained' );
+                $attributes            = Style_Parser::parse_container_styles( $settings );
+                $attributes['layout']  = array( 'type' => 'constrained' );
 
                 return Block_Builder::build( 'group', $attributes, implode( '', $child_blocks ) );
         }
 
         /**
-         * Render the icon portion of the widget.
+         * Render the image portion of the image box.
          *
          * @param array $settings Widget settings.
          */
-        private function render_icon_block( array $settings ): string {
-                $icon_data = $settings['selected_icon'] ?? null;
-                if ( is_array( $icon_data ) && isset( $icon_data['value'] ) && '' !== $icon_data['value'] ) {
-                        return $this->render_icon_html_block( $icon_data['value'], $settings );
+        private function render_image_block( array $settings ): string {
+                $image = $settings['image'] ?? $settings['selected_image'] ?? $settings['image_image'] ?? null;
+                if ( ! is_array( $image ) ) {
+                        return '';
                 }
 
-                $fallback_icon = isset( $settings['icon'] ) ? (string) $settings['icon'] : '';
-                if ( '' !== $fallback_icon ) {
-                        return $this->render_icon_html_block( $fallback_icon, $settings );
+                $url = isset( $image['url'] ) ? trim( (string) $image['url'] ) : '';
+                if ( '' === $url ) {
+                        return '';
                 }
 
-                $icon_image = $settings['icon_image'] ?? null;
-                if ( is_array( $icon_image ) && ! empty( $icon_image['url'] ) ) {
-                        $image_settings = array(
-                                'image' => $icon_image,
-                                'link'  => $settings['link'] ?? array(),
-                        );
+                $alt        = isset( $image['alt'] ) ? (string) $image['alt'] : '';
+                $attachment = isset( $image['id'] ) && is_numeric( $image['id'] ) ? (int) $image['id'] : 0;
+                $link       = is_array( $settings['link'] ?? null ) ? (string) ( $settings['link']['url'] ?? '' ) : '';
 
-                        $image_handler = new Image_Widget_Handler();
+                $image_attrs = array(
+                        'url'             => $url,
+                        'sizeSlug'        => 'full',
+                        'linkDestination' => '' !== $link ? 'custom' : 'none',
+                );
 
-                        return $image_handler->handle( array( 'settings' => $image_settings ) );
+                if ( $attachment > 0 ) {
+                        $image_attrs['id'] = $attachment;
                 }
 
-                return '';
+                $img_html = sprintf(
+                        '<img src="%s" alt="%s" />',
+                        esc_url( $url ),
+                        esc_attr( $alt )
+                );
+
+                if ( '' !== $link ) {
+                        $img_html = sprintf( '<a href="%s">%s</a>', esc_url( $link ), $img_html );
+                }
+
+                $figure_html = sprintf(
+                        '<figure class="%s">%s</figure>',
+                        esc_attr( 'wp-block-image' ),
+                        $img_html
+                );
+
+                return Block_Builder::build( 'image', $image_attrs, $figure_html );
         }
 
         /**
-         * Render the icon markup as an HTML block.
-         *
-         * @param string $icon_class Icon class string.
-         * @param array  $settings   Widget settings.
-         */
-        private function render_icon_html_block( string $icon_class, array $settings ): string {
-                $classes = array( 'wp-block-group__icon', 'elementor-icon-box-icon' );
-                $icon_classes = array( 'elementor-icon' );
-
-                foreach ( preg_split( '/\s+/', $icon_class ) as $class ) {
-                        $class = trim( $class );
-                        if ( '' !== $class ) {
-                                $icon_classes[] = sanitize_html_class( $class );
-                        }
-                }
-
-                $style_rules = array();
-                if ( isset( $settings['icon_size']['size'] ) && is_numeric( $settings['icon_size']['size'] ) ) {
-                        $unit         = $settings['icon_size']['unit'] ?? 'px';
-                        $style_rules[] = 'font-size:' . ( (float) $settings['icon_size']['size'] ) . $unit . ';';
-                }
-
-                if ( isset( $settings['icon_color'] ) ) {
-                        $color = strtolower( (string) $settings['icon_color'] );
-                        if ( '' !== $color ) {
-                                $style_rules[] = 'color:' . $color . ';';
-                        }
-                }
-
-                $icon_markup = sprintf(
-                        '<span class="%s"%s aria-hidden="true"></span>',
-                        esc_attr( implode( ' ', array_unique( $icon_classes ) ) ),
-                        empty( $style_rules ) ? '' : ' style="' . esc_attr( implode( '', $style_rules ) ) . '"'
-                );
-
-                $inner_html = sprintf(
-                        '<div class="%s">%s</div>',
-                        esc_attr( implode( ' ', $classes ) ),
-                        $icon_markup
-                );
-
-                return Block_Builder::build( 'html', array(), $inner_html );
-        }
-
-        /**
-         * Render the title block.
+         * Render the heading portion of the image box.
          *
          * @param array $settings Widget settings.
          */
@@ -148,7 +121,7 @@ class Icon_Box_Widget_Handler implements Widget_Handler_Interface {
 
                 $heading_settings = array(
                         'title'        => $title,
-                        'header_size'  => $settings['title_size'] ?? $settings['title_tag'] ?? 'h4',
+                        'header_size'  => $settings['title_size'] ?? $settings['title_tag'] ?? 'h3',
                         'title_color'  => $settings['title_color'] ?? '',
                         '_css_classes' => $settings['title_css_classes'] ?? '',
                         '_element_id'  => $settings['title_element_id'] ?? '',
@@ -162,7 +135,7 @@ class Icon_Box_Widget_Handler implements Widget_Handler_Interface {
         }
 
         /**
-         * Render the description block.
+         * Render the description portion of the image box.
          *
          * @param array $settings Widget settings.
          */
@@ -187,10 +160,12 @@ class Icon_Box_Widget_Handler implements Widget_Handler_Interface {
         }
 
         /**
-         * Remap prefixed typography settings.
+         * Remap Elementor typography settings with a given prefix to the standard keys.
          *
          * @param array  $settings Widget settings.
          * @param string $prefix   Prefix to strip.
+         *
+         * @return array
          */
         private function remap_typography_settings( array $settings, string $prefix ): array {
                 $mapped      = array();
@@ -207,7 +182,8 @@ class Icon_Box_Widget_Handler implements Widget_Handler_Interface {
                                 continue;
                         }
 
-                        $mapped[ 'typography_' . $suffix ] = $value;
+                        $mapped_key           = 'typography_' . $suffix;
+                        $mapped[ $mapped_key ] = $value;
                 }
 
                 return $mapped;
