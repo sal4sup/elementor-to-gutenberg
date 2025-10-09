@@ -13,13 +13,17 @@
 	"autoload": {
 		"psr-4": {
 			"Progressus\\Gutenberg\\": "src/"
-		}
+		},
+		"classmap": [
+			"src/"
+		]
 	},
 	"archive": {
 		"exclude": [
 			"!/assets",
 			"!/languages",
 			"!/vendor",
+			"/node_modules",
 			"composer.json",
 			"composer.lock",
 			"package.json",
