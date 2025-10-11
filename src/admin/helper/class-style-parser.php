@@ -22,49 +22,16 @@ class Style_Parser {
  *
  * @return array{attributes:array, style:string}
  */
-public static function parse_typography( array $settings ): array {
-$attributes   = array();
-$style_parts  = array();
-$fields       = array(
-'typography_font_family'     => array( 'attr' => 'fontFamily', 'css' => 'font-family' ),
-'typography_text_transform'  => array( 'attr' => 'textTransform', 'css' => 'text-transform' ),
-'typography_font_style'      => array( 'attr' => 'fontStyle', 'css' => 'font-style' ),
-'typography_font_weight'     => array( 'attr' => 'fontWeight', 'css' => 'font-weight' ),
-'typography_text_decoration' => array( 'attr' => 'textDecoration', 'css' => 'text-decoration' ),
-);
+    public static function parse_typography( array $settings ): array {
+        // Typography settings are intentionally ignored to avoid inline font styling
+        // that does not round-trip with Gutenberg serialization.
+        unset( $settings );
 
-foreach ( $fields as $key => $map ) {
-$value = self::sanitize_scalar( $settings[ $key ] ?? null );
-if ( '' === $value ) {
-continue;
-}
-
-$attributes[ $map['attr'] ] = $value;
-$style_parts[]             = sprintf( '%s:%s;', $map['css'], $value );
-}
-
-$dimensions = array(
-'typography_font_size'      => array( 'attr' => 'fontSize', 'css' => 'font-size', 'default_unit' => 'px' ),
-'typography_line_height'    => array( 'attr' => 'lineHeight', 'css' => 'line-height', 'default_unit' => '' ),
-'typography_letter_spacing' => array( 'attr' => 'letterSpacing', 'css' => 'letter-spacing', 'default_unit' => 'px' ),
-'typography_word_spacing'   => array( 'attr' => 'wordSpacing', 'css' => 'word-spacing', 'default_unit' => 'px' ),
-);
-
-foreach ( $dimensions as $key => $map ) {
-$value = self::normalize_dimension( $settings[ $key ] ?? null, $map['default_unit'] );
-if ( null === $value ) {
-continue;
-}
-
-$attributes[ $map['attr'] ] = $value;
-$style_parts[]             = sprintf( '%s:%s;', $map['css'], $value );
-}
-
-return array(
-'attributes' => $attributes,
-'style'      => implode( '', $style_parts ),
-);
-}
+        return array(
+            'attributes' => array(),
+            'style'      => '',
+        );
+    }
 
 /**
  * Parse spacing settings from Elementor settings.
@@ -73,50 +40,14 @@ return array(
  *
  * @return array{attributes:array, style:string}
  */
-public static function parse_spacing( array $settings ): array {
-$attributes  = array();
-$style_parts = array();
-$maps        = array(
-'_padding' => 'padding',
-'_margin'  => 'margin',
-'padding'  => 'padding',
-'margin'   => 'margin',
-);
+    public static function parse_spacing( array $settings ): array {
+        unset( $settings );
 
-foreach ( $maps as $key => $type ) {
-$data = $settings[ $key ] ?? null;
-if ( ! is_array( $data ) ) {
-continue;
-}
-
-foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
-$value = self::extract_box_value( $data, $side );
-if ( null === $value ) {
-continue;
-}
-
-$attributes[ $type ][ $side ] = $value;
-$style_parts[]               = sprintf( '%s-%s:%s;', $type, $side, $value );
-}
-}
-
-$gap_keys = array( 'gap', 'column_gap', 'gap_columns' );
-foreach ( $gap_keys as $gap_key ) {
-$gap_value = self::normalize_dimension( $settings[ $gap_key ] ?? null, 'px' );
-if ( null === $gap_value ) {
-continue;
-}
-
-$attributes['blockGap'] = $gap_value;
-$style_parts[]          = sprintf( 'gap:%s;', $gap_value );
-break;
-}
-
-return array(
-'attributes' => $attributes,
-'style'      => implode( '', $style_parts ),
-);
-}
+        return array(
+            'attributes' => array(),
+            'style'      => '',
+        );
+    }
 
 /**
  * Parse border settings safely.
@@ -125,71 +56,14 @@ return array(
  *
  * @return array{attributes:array, style:string}
  */
-public static function parse_border( array $settings ): array {
-$attributes  = array();
-$style_parts = array();
+    public static function parse_border( array $settings ): array {
+        unset( $settings );
 
-$radius_sources = array( '_border_radius', 'border_radius' );
-foreach ( $radius_sources as $radius_key ) {
-$radius_data = $settings[ $radius_key ] ?? null;
-if ( ! is_array( $radius_data ) ) {
-continue;
-}
-
-$unit = self::sanitize_scalar( $radius_data['unit'] ?? 'px' );
-foreach ( array(
-'topLeft'     => 'top',
-'topRight'    => 'right',
-'bottomRight' => 'bottom',
-'bottomLeft'  => 'left',
-) as $attr_key => $side ) {
-$value = self::normalize_dimension( $radius_data[ $side ] ?? null, $unit );
-if ( null === $value ) {
-continue;
-}
-
-$attributes['radius'][ $attr_key ] = $value;
-$style_parts[]                    = sprintf( 'border-%s-radius:%s;', str_replace( array( 'Left', 'Right' ), array( 'left', 'right' ), strtolower( preg_replace( '/([A-Z])/', '-$1', $attr_key ) ) ), $value );
-}
-}
-
-$width_sources = array( '_border_width', 'border_width' );
-$color         = self::sanitize_color( $settings['border_color'] ?? $settings['_border_color'] ?? '' );
-
-foreach ( $width_sources as $width_key ) {
-$width_data = $settings[ $width_key ] ?? null;
-if ( ! is_array( $width_data ) ) {
-continue;
-}
-
-$unit = self::sanitize_scalar( $width_data['unit'] ?? 'px' );
-foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
-$value = self::normalize_dimension( $width_data[ $side ] ?? null, $unit );
-if ( null === $value ) {
-continue;
-}
-
-$attributes[ $side ]['width'] = $value;
-$style_parts[]               = sprintf( 'border-%s-width:%s;', $side, $value );
-
-if ( '' !== $color ) {
-$attributes[ $side ]['color'] = $color;
-$style_parts[]                = sprintf( 'border-%s-color:%s;', $side, $color );
-}
-}
-}
-
-$style_value = self::sanitize_scalar( $settings['_border_border'] ?? $settings['border_style'] ?? '' );
-if ( '' !== $style_value ) {
-$attributes['style'] = $style_value;
-$style_parts[]       = sprintf( 'border-style:%s;', $style_value );
-}
-
-return array(
-'attributes' => $attributes,
-'style'      => implode( '', $style_parts ),
-);
-}
+        return array(
+            'attributes' => array(),
+            'style'      => '',
+        );
+    }
 
 /**
  * Parse container specific styles into block attributes.
@@ -199,28 +73,12 @@ return array(
  * @return array
  */
 public static function parse_container_styles( array $settings ): array {
-$attributes = array();
+        $attributes = array();
 
-$spacing = self::parse_spacing( $settings );
-if ( ! empty( $spacing['attributes'] ) ) {
-$attributes['style']['spacing'] = $spacing['attributes'];
-}
-
-$border = self::parse_border( $settings );
-if ( ! empty( $border['attributes'] ) ) {
-$attributes['style']['border'] = $border['attributes'];
-}
-
-$background = self::sanitize_color( $settings['background_color'] ?? $settings['_background_color'] ?? '' );
-if ( '' !== $background ) {
-if ( self::is_preset_slug( $background ) ) {
-$attributes['backgroundColor'] = $background;
-$attributes['className']      = self::append_class( $attributes['className'] ?? '', 'has-background' );
-} else {
-$attributes['style']['color']['background'] = $background;
-$attributes['className']                     = self::append_class( $attributes['className'] ?? '', 'has-background' );
-}
-}
+        $background = self::sanitize_color( $settings['background_color'] ?? $settings['_background_color'] ?? '' );
+        if ( self::is_preset_slug( $background ) ) {
+            $attributes['backgroundColor'] = $background;
+        }
 
         $custom_classes = self::sanitize_class_string( $settings['_css_classes'] ?? '' );
         if ( '' !== $custom_classes ) {
@@ -410,6 +268,7 @@ private static function sanitize_class_string( $value ): string {
             'elementor_',
             'e-con-',
             'e-grid-',
+            'wp-elements-',
         );
 
         foreach ( $blocked_prefixes as $prefix ) {

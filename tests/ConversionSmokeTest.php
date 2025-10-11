@@ -207,7 +207,11 @@ expect_true( str_contains( $simple_output, '<!-- wp:group {"layout":{"type":"gri
 expect_true( str_contains( $simple_output, '<!-- wp:heading' ), 'Heading block missing from simple grid.' );
 expect_true( str_contains( $simple_output, '<!-- wp:image' ), 'Image block missing from simple grid.' );
 expect_true( str_contains( $simple_output, '<!-- wp:buttons' ), 'Buttons block missing from simple grid.' );
-expect_true( str_contains( $simple_output, '<!-- wp:button ' ) && str_contains( $simple_output, '"text":"Click me"' ) && str_contains( $simple_output, '"url":"https:\/\/example.com"' ), 'Button block should be self closing with text and URL.' );
+expect_true( str_contains( $simple_output, '<!-- wp:button {"url":"https:\/\/example.com"}' ), 'Button block should include the URL attribute.' );
+expect_true( str_contains( $simple_output, '<a class="wp-block-button__link wp-element-button" href="https://example.com">Click me</a>' ), 'Button anchor should render link markup.' );
+expect_true( ! preg_match( '/<figure[^>]+style=/', $simple_output ), 'Images should not include inline style attributes on figure.' );
+expect_true( ! preg_match( '/<img[^>]+style=/', $simple_output ), 'Images should not include inline style attributes on img tags.' );
+expect_true( ! str_contains( $simple_output, 'wp-elements-' ), 'Elementor helper classes should not persist.' );
 
 $flex_container = array(
     array(
@@ -267,6 +271,7 @@ expect_true( substr_count( $flex_output, '<!-- wp:group {"layout":{"type":"const
 expect_true( str_contains( $flex_output, 'has-global-padding' ), 'Boxed flex container should keep global padding class.' );
 expect_true( ! str_contains( $flex_output, 'e-con' ), 'Elementor classes should not leak into output.' );
 expect_true( str_contains( $flex_output, '<p>Flex description text.</p>' ), 'Paragraph should remain a single p element.' );
+expect_true( ! preg_match( '/<p[^>]+style=/', $flex_output ), 'Paragraphs should not include inline style attributes.' );
 
 $card_row = array(
     array(
