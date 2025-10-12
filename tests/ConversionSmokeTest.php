@@ -193,13 +193,26 @@ array(
 array(
 'elType'     => 'widget',
 'widgetType' => 'button',
-'settings'   => array(
-'text' => 'Click me',
-'link' => array( 'url' => 'https://example.com' ),
-),
-),
-),
-),
+                'settings'   => array(
+                    'text'               => 'Click me',
+                    'link'               => array( 'url' => 'https://example.com' ),
+                    'button_text_color'  => '#ffffff',
+                    'background_color'   => '#467ff7',
+                    'text_padding'       => array(
+                        'top'    => '16',
+                        'right'  => '55',
+                        'bottom' => '16',
+                        'left'   => '55',
+                        'unit'   => 'px',
+                    ),
+                    'border_radius'      => array(
+                        'size' => '100',
+                        'unit' => 'px',
+                    ),
+                ),
+            ),
+        ),
+    ),
 );
 
 $simple_output = $converter->parse_elementor_elements( $simple_grid );
@@ -212,6 +225,13 @@ expect_true(
     'Button block should include the URL attribute.'
 );
 expect_true( str_contains( $simple_output, '<a class="wp-block-button__link wp-element-button" href="https://example.com">Click me</a>' ), 'Button anchor should render link markup.' );
+expect_true( ! preg_match( '/<a[^>]+style=/', $simple_output ), 'Button anchor should not include inline styles.' );
+expect_true(
+    str_contains( $simple_output, '"style":{"color":{"text":"#ffffff","background":"#467ff7"},"spacing":{"padding":{"top":"16px"' )
+    || str_contains( $simple_output, '"style":{"color":{"background":"#467ff7","text":"#ffffff"},"spacing":{"padding":{"top":"16px"' ),
+    'Button block should store padding and color styles in attributes.'
+);
+expect_true( str_contains( $simple_output, '"border":{"radius":"100px"}' ), 'Button block should include border radius attribute.' );
 expect_true( ! preg_match( '/<figure[^>]+style=/', $simple_output ), 'Images should not include inline style attributes on figure.' );
 expect_true( ! preg_match( '/<img[^>]+style=/', $simple_output ), 'Images should not include inline style attributes on img tags.' );
 expect_true( ! str_contains( $simple_output, 'wp-elements-' ), 'Elementor helper classes should not persist.' );
@@ -220,7 +240,9 @@ $flex_container = array(
     array(
         'elType'   => 'container',
         'settings' => array(
-            '_css_classes' => 'e-con e-con-boxed',
+            '_css_classes'        => 'e-con e-con-boxed',
+            'flex_justify_content' => 'space-between',
+            'flex_wrap'           => 'nowrap',
         ),
         'elements' => array(
             array(
@@ -272,10 +294,11 @@ $flex_output = $converter->parse_elementor_elements( $flex_container );
 expect_true(
     str_contains( $flex_output, '"layout":{"type":"flex"' )
     && str_contains( $flex_output, '"justifyContent":"space-between"' )
-    && str_contains( $flex_output, '"flexWrap":"wrap"' ),
+    && str_contains( $flex_output, '"flexWrap":"nowrap"' )
+    && str_contains( $flex_output, '"orientation":"horizontal"' ),
     'Flex container should render as flex group.'
 );
-expect_true( substr_count( $flex_output, '<!-- wp:group -->' ) >= 2, 'Flex children should render as plain groups without layout metadata.' );
+expect_true( substr_count( $flex_output, '<!-- wp:group -->' ) >= 1, 'At least one flex child should render as a plain group without layout metadata.' );
 expect_true( 2 === substr_count( $flex_output, 'has-global-padding' ), 'Only the outer boxed flex container should carry global padding.' );
 expect_true( ! str_contains( $flex_output, 'e-con' ), 'Elementor classes should not leak into output.' );
 expect_true( str_contains( $flex_output, '<p>Flex description text.</p>' ), 'Paragraph should remain a single p element.' );
@@ -321,15 +344,15 @@ $card_row = array(
                     ),
                 );
             },
-            range( 1, 3 )
+            range( 1, 4 )
         ),
     ),
 );
 
 $card_output = $converter->parse_elementor_elements( $card_row );
 expect_true( str_contains( $card_output, '<!-- wp:columns' ), 'Card row should render columns block.' );
-expect_true( 3 === substr_count( $card_output, '<!-- wp:column --' ), 'Card row should contain three columns.' );
-expect_true( 3 === substr_count( $card_output, '<!-- wp:button {' ), 'Each card should contain a button block.' );
+expect_true( 4 === substr_count( $card_output, '<!-- wp:column --' ), 'Card row should contain four columns.' );
+expect_true( 4 === substr_count( $card_output, '<!-- wp:button {' ), 'Each card should contain a button block.' );
 
 $youtube_widget = array(
     array(

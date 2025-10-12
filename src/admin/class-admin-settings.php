@@ -380,7 +380,7 @@ return $this->parse_elementor_elements( $json_data['content'] );
         }
 
         if ( $is_row ) {
-            return $this->render_row_group( $container_attr, $child_data );
+            return $this->render_row_group( $container_attr, $child_data, $container_settings );
         }
 
         return $this->render_group( $container_attr, $child_data, ! $is_flex_child );
@@ -417,13 +417,9 @@ return $this->parse_elementor_elements( $json_data['content'] );
  * @param array $attributes Block attributes.
  * @param array $child_data Rendered child data arrays.
  */
-private function render_row_group( array $attributes, array $child_data ): string {
-        $attributes['layout'] = array(
-                'type'           => 'flex',
-                'justifyContent' => 'space-between',
-                'flexWrap'       => 'wrap',
-                'orientation'    => 'horizontal',
-        );
+private function render_row_group( array $attributes, array $child_data, array $settings ): string {
+        $attributes['layout'] = $this->build_flex_layout_configuration( $settings );
+        $attributes           = $this->apply_flex_gap_to_attributes( $attributes, $settings );
 
         $inner_html = '';
         foreach ( $child_data as $child ) {
@@ -436,6 +432,110 @@ private function render_row_group( array $attributes, array $child_data ): strin
 
         return Block_Builder::build( 'group', $attributes, $inner_html );
 }
+
+    /**
+     * Build Gutenberg flex layout configuration from Elementor settings.
+     *
+     * @param array $settings Elementor container settings.
+     */
+    private function build_flex_layout_configuration( array $settings ): array {
+        $layout = array(
+            'type'        => 'flex',
+            'orientation' => 'horizontal',
+        );
+
+        $direction = Container_Classifier::get_flex_direction( $settings );
+        if ( in_array( $direction, array( 'column', 'column-reverse' ), true ) ) {
+            $layout['orientation'] = 'vertical';
+        }
+
+        $justify = strtolower( (string) ( $settings['flex_justify_content'] ?? $settings['justify_content'] ?? '' ) );
+        $justify = $justify ?: strtolower( (string) ( $settings['horizontal_align'] ?? '' ) );
+
+        $allowed_justify = array(
+            'flex-start',
+            'flex-end',
+            'center',
+            'space-between',
+            'space-around',
+            'space-evenly',
+            'left',
+            'right',
+        );
+
+        if ( in_array( $justify, $allowed_justify, true ) ) {
+            $layout['justifyContent'] = $justify;
+        } else {
+            $layout['justifyContent'] = 'space-between';
+        }
+
+        $wrap_candidates = array(
+            $settings['flex_wrap'] ?? null,
+            $settings['flex_wrap_tablet'] ?? null,
+            $settings['flex_wrap_mobile'] ?? null,
+        );
+
+        $wrap = null;
+        foreach ( $wrap_candidates as $candidate ) {
+            if ( ! is_string( $candidate ) ) {
+                continue;
+            }
+
+            $normalized = strtolower( trim( $candidate ) );
+            if ( '' === $normalized ) {
+                continue;
+            }
+
+            if ( in_array( $normalized, array( 'nowrap', 'wrap' ), true ) ) {
+                $wrap = $normalized;
+                break;
+            }
+
+            if ( 'wrap-reverse' === $normalized ) {
+                $wrap = 'wrap';
+                break;
+            }
+        }
+
+        $layout['flexWrap'] = $wrap ?? 'nowrap';
+
+        return $layout;
+    }
+
+    /**
+     * Apply flex gap spacing from Elementor settings to block attributes.
+     *
+     * @param array $attributes Existing block attributes.
+     * @param array $settings   Elementor settings array.
+     */
+    private function apply_flex_gap_to_attributes( array $attributes, array $settings ): array {
+        $gap_sources = array(
+            $settings['flex_gap'] ?? null,
+            $settings['gap'] ?? null,
+        );
+
+        foreach ( $gap_sources as $gap ) {
+            $normalized = Style_Parser::normalize_dimension_value( $gap );
+            if ( null === $normalized && is_array( $gap ) ) {
+                $normalized = Style_Parser::normalize_dimension_value( $gap['size'] ?? $gap['value'] ?? null, $gap['unit'] ?? 'px' );
+            }
+
+            if ( null !== $normalized ) {
+                $attributes['style']['spacing']['blockGap'] = $normalized;
+                break;
+            }
+        }
+
+        if ( isset( $attributes['style']['spacing']['blockGap'] ) && '' === $attributes['style']['spacing']['blockGap'] ) {
+            unset( $attributes['style']['spacing']['blockGap'] );
+        }
+
+        if ( isset( $attributes['style'] ) && empty( $attributes['style'] ) ) {
+            unset( $attributes['style'] );
+        }
+
+        return $attributes;
+    }
 
 /**
  * Render a Gutenberg grid layout group.

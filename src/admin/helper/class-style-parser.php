@@ -72,7 +72,7 @@ class Style_Parser {
  *
  * @return array
  */
-public static function parse_container_styles( array $settings ): array {
+    public static function parse_container_styles( array $settings ): array {
         $attributes = array();
 
         $background = self::sanitize_color( $settings['background_color'] ?? $settings['_background_color'] ?? '' );
@@ -90,19 +90,19 @@ public static function parse_container_styles( array $settings ): array {
  *
  * @param string $color Color string.
  */
-private static function is_preset_slug( string $color ): bool {
-return '' !== $color && false === strpos( $color, '#' ) && 0 !== strpos( $color, 'rgb' );
-}
+    private static function is_preset_slug( string $color ): bool {
+        return '' !== $color && false === strpos( $color, '#' ) && 0 !== strpos( $color, 'rgb' );
+    }
 
 /**
  * Sanitize a scalar value from Elementor settings.
  *
  * @param mixed $value Raw value.
  */
-private static function sanitize_scalar( $value ): string {
-if ( is_array( $value ) ) {
-return '';
-}
+    private static function sanitize_scalar( $value ): string {
+        if ( is_array( $value ) ) {
+            return '';
+        }
 
 $value = is_bool( $value ) ? ( $value ? '1' : '0' ) : (string) $value;
 
@@ -114,63 +114,100 @@ return trim( $value );
  *
  * @param mixed $value Potential color value.
  */
-private static function sanitize_color( $value ): string {
-if ( is_array( $value ) ) {
-$value = $value['value'] ?? $value['color'] ?? '';
-}
+    private static function sanitize_color( $value ): string {
+        if ( is_array( $value ) ) {
+            $value = $value['value'] ?? $value['color'] ?? '';
+        }
 
-return strtolower( self::sanitize_scalar( $value ) );
-}
+        return strtolower( self::sanitize_scalar( $value ) );
+    }
 
-/**
- * Normalize Elementor dimension value.
- *
- * @param mixed  $value Raw value.
- * @param string $default_unit Default unit when missing.
- */
-private static function normalize_dimension( $value, string $default_unit ): ?string {
-if ( is_array( $value ) ) {
-if ( isset( $value['size'] ) ) {
-return self::normalize_dimension( $value['size'], $value['unit'] ?? $default_unit );
-}
-if ( isset( $value['value'] ) ) {
-return self::normalize_dimension( $value['value'], $value['unit'] ?? $default_unit );
-}
-}
+    /**
+     * Normalize Elementor dimension value into a CSS string suitable for block attributes.
+     *
+     * @param mixed  $value        Raw value from Elementor settings.
+     * @param string $default_unit Default unit when none is provided.
+     *
+     * @return string|null Normalized dimension or null when not applicable.
+     */
+    public static function normalize_dimension_value( $value, string $default_unit = 'px' ): ?string {
+        if ( is_array( $value ) ) {
+            if ( isset( $value['size'] ) ) {
+                return self::normalize_dimension_value( $value['size'], $value['unit'] ?? $default_unit );
+            }
 
-if ( null === $value || '' === $value ) {
-return null;
-}
+            if ( isset( $value['value'] ) ) {
+                return self::normalize_dimension_value( $value['value'], $value['unit'] ?? $default_unit );
+            }
+        }
 
-if ( is_numeric( $value ) ) {
-return $value . ( '' === $default_unit ? '' : $default_unit );
-}
+        if ( null === $value || '' === $value ) {
+            return null;
+        }
 
-$value = trim( (string) $value );
-if ( '' === $value ) {
-return null;
-}
+        if ( is_numeric( $value ) ) {
+            $number = (string) ( 0 + $value );
 
-if ( preg_match( '/[a-z%]+$/i', $value ) ) {
-return $value;
-}
+            return $number . ( '' === $default_unit ? '' : $default_unit );
+        }
 
-return $value . ( '' === $default_unit ? '' : $default_unit );
-}
+        $string_value = trim( (string) $value );
+        if ( '' === $string_value ) {
+            return null;
+        }
 
-/**
- * Extract padding/margin side values.
- *
- * @param array  $data Elementor box model array.
- * @param string $side Side to extract.
- */
-private static function extract_box_value( array $data, string $side ): ?string {
-if ( array_key_exists( $side, $data ) ) {
-return self::normalize_dimension( $data[ $side ], $data['unit'] ?? 'px' );
-}
+        if ( preg_match( '/^[0-9.]+$/', $string_value ) ) {
+            return $string_value . ( '' === $default_unit ? '' : $default_unit );
+        }
 
-return null;
-}
+        return $string_value;
+    }
+
+    /**
+     * Parse an Elementor box control into individual CSS values.
+     *
+     * @param mixed  $value        Elementor box control value.
+     * @param string $default_unit Default unit when none provided.
+     *
+     * @return array<string,string> Associative array of side => value pairs.
+     */
+    public static function parse_box_sides( $value, string $default_unit = 'px' ): array {
+        if ( ! is_array( $value ) ) {
+            return array();
+        }
+
+        $unit   = isset( $value['unit'] ) ? (string) $value['unit'] : $default_unit;
+        $result = array();
+
+        foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+            if ( array_key_exists( $side, $value ) ) {
+                $normalized = self::normalize_dimension_value( $value[ $side ], $unit );
+                if ( null !== $normalized ) {
+                    $result[ $side ] = $normalized;
+                }
+            }
+        }
+
+        if ( empty( $result ) && isset( $value['size'] ) ) {
+            $normalized = self::normalize_dimension_value( $value['size'], $unit );
+            if ( null !== $normalized ) {
+                foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+                    $result[ $side ] = $normalized;
+                }
+            }
+        }
+
+        if ( empty( $result ) && isset( $value['value'] ) ) {
+            $normalized = self::normalize_dimension_value( $value['value'], $unit );
+            if ( null !== $normalized ) {
+                foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+                    $result[ $side ] = $normalized;
+                }
+            }
+        }
+
+        return $result;
+    }
 
     /**
      * Sanitize a single class name while dropping Elementor-generated classes.

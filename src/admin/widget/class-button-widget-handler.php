@@ -80,6 +80,16 @@ class Button_Widget_Handler implements Widget_Handler_Interface {
             }
         }
 
+        $padding_values = $this->extract_padding( $settings );
+        if ( ! empty( $padding_values ) ) {
+            $button_attributes['style']['spacing']['padding'] = $padding_values;
+        }
+
+        $radius_value = $this->extract_border_radius( $settings );
+        if ( null !== $radius_value ) {
+            $button_attributes['style']['border']['radius'] = $radius_value;
+        }
+
         if ( '' !== $url ) {
             $button_attributes['url'] = $url;
         }
@@ -107,7 +117,7 @@ class Button_Widget_Handler implements Widget_Handler_Interface {
         $anchor_attrs[] = 'class="' . esc_attr( implode( ' ', $anchor_classes ) ) . '"';
 
         if ( '' !== $url ) {
-            $anchor_attrs[] = 'href="' . $url . '"';
+            $anchor_attrs[] = 'href="' . esc_url( $url ) . '"';
         }
 
         if ( ! empty( $link_data['is_external'] ) ) {
@@ -141,5 +151,66 @@ class Button_Widget_Handler implements Widget_Handler_Interface {
      */
     private function is_hex_color( string $color ): bool {
         return 1 === preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $color );
+    }
+
+    /**
+     * Extract padding values from Elementor settings.
+     */
+    private function extract_padding( array $settings ): array {
+        $padding_sources = array(
+            $settings['text_padding'] ?? null,
+            $settings['padding'] ?? null,
+        );
+
+        foreach ( $padding_sources as $source ) {
+            $values = Style_Parser::parse_box_sides( $source ?? array() );
+            if ( ! empty( $values ) ) {
+                return $values;
+            }
+        }
+
+        return array();
+    }
+
+    /**
+     * Extract a uniform border radius value for the button block.
+     */
+    private function extract_border_radius( array $settings ): ?string {
+        $radius_sources = array(
+            $settings['border_radius'] ?? null,
+            $settings['button_border_radius'] ?? null,
+        );
+
+        foreach ( $radius_sources as $radius ) {
+            if ( null === $radius ) {
+                continue;
+            }
+
+            if ( is_array( $radius ) ) {
+                $unit   = isset( $radius['unit'] ) ? (string) $radius['unit'] : 'px';
+                $values = Style_Parser::parse_box_sides( $radius, $unit );
+
+                if ( ! empty( $values ) ) {
+                    $unique = array_unique( array_values( $values ) );
+                    if ( 1 === count( $unique ) ) {
+                        return $unique[0];
+                    }
+                }
+
+                $fallback = Style_Parser::normalize_dimension_value( $radius['size'] ?? $radius['value'] ?? null, $unit );
+                if ( null !== $fallback ) {
+                    return $fallback;
+                }
+
+                continue;
+            }
+
+            $normalized = Style_Parser::normalize_dimension_value( $radius );
+            if ( null !== $normalized ) {
+                return $normalized;
+            }
+        }
+
+        return null;
     }
 }
