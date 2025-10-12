@@ -101,7 +101,7 @@ public function handle( array $element ): string {
 
         $width = $this->normalize_dimension( $settings['width'] ?? null );
         if ( null !== $width ) {
-            $image_attrs['width'] = $width;
+            $image_attrs['width'] = is_numeric( $width ) ? (float) $width : $width;
             if ( '100%' !== $width ) {
                 $figure_classes[] = 'is-resized';
             }
@@ -168,24 +168,46 @@ public function handle( array $element ): string {
      * @param mixed $value Raw value.
      */
     private function normalize_dimension( $value ): ?string {
-        if ( is_array( $value ) ) {
-            if ( isset( $value['size'] ) ) {
-                return $this->normalize_dimension( $value['size'] . ( $value['unit'] ?? 'px' ) );
-            }
-            if ( isset( $value['value'] ) ) {
-                return $this->normalize_dimension( $value['value'] . ( $value['unit'] ?? 'px' ) );
-            }
-        }
-
         if ( null === $value ) {
             return null;
         }
 
-        $value = trim( (string) $value );
-        if ( '' === $value ) {
+        if ( is_array( $value ) ) {
+            $size = $value['size'] ?? $value['value'] ?? null;
+            $unit = isset( $value['unit'] ) ? trim( (string) $value['unit'] ) : '';
+
+            if ( null === $size ) {
+                return null;
+            }
+
+            if ( '' === $unit ) {
+                return $this->normalize_dimension( $size );
+            }
+
+            return $this->normalize_dimension( $size . $unit );
+        }
+
+        if ( is_numeric( $value ) ) {
+            return (string) (float) $value;
+        }
+
+        $string_value = trim( (string) $value );
+        if ( '' === $string_value ) {
             return null;
         }
 
-        return $value;
+        if ( preg_match( '/^([0-9.]+)px$/i', $string_value, $matches ) ) {
+            return (string) (float) $matches[1];
+        }
+
+        if ( preg_match( '/^100%$/', $string_value ) ) {
+            return '100%';
+        }
+
+        if ( preg_match( '/^([0-9.]+)%$/', $string_value, $percent_matches ) ) {
+            return $percent_matches[1] . '%';
+        }
+
+        return $string_value;
     }
 }

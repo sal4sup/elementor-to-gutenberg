@@ -348,13 +348,6 @@ private function render_container( array $element ): string {
         $container_attr     = Style_Parser::parse_container_styles( $container_settings );
         $container_classes  = Container_Classifier::get_element_classes( $element );
         $container_attr     = $this->apply_container_class_adjustments( $container_attr, $container_classes );
-        $child_blocks       = array_map(
-                static function ( array $data ): string {
-                        return $data['content'] ?? '';
-                },
-                $child_data
-        );
-
         if ( Container_Classifier::is_grid( $element ) ) {
                 $columns = Container_Classifier::get_grid_column_count( $element, $child_count );
 
@@ -366,23 +359,31 @@ private function render_container( array $element ): string {
         }
 
         if ( Container_Classifier::is_row( $element, $child_count ) ) {
-                return $this->render_row_group( $container_attr, $child_blocks );
+                return $this->render_row_group( $container_attr, $child_data );
         }
 
-        $layout_type = in_array( 'e-con-full', $container_classes, true ) ? 'default' : 'constrained';
-
-        return $this->render_group( $container_attr, $child_blocks, $layout_type );
+        return $this->render_group( $container_attr, $child_data );
 }
 
 /**
  * Render a Gutenberg group with constrained layout.
  *
  * @param array $attributes Block attributes.
- * @param array $child_blocks Rendered child blocks.
+ * @param array $child_data Rendered child data arrays.
  */
-private function render_group( array $attributes, array $child_blocks, string $layout_type = 'constrained' ): string {
-        $attributes['layout'] = array( 'type' => $layout_type );
-        $inner_html           = implode( '', $child_blocks );
+private function render_group( array $attributes, array $child_data ): string {
+        if ( empty( $attributes['layout'] ) || ! is_array( $attributes['layout'] ) ) {
+                $attributes['layout'] = array( 'type' => 'constrained' );
+        }
+
+        $inner_html = '';
+        foreach ( $child_data as $child ) {
+                $content = $child['content'] ?? '';
+                if ( '' === $content ) {
+                        continue;
+                }
+                $inner_html .= $content;
+        }
 
         return Block_Builder::build( 'group', $attributes, $inner_html );
 }
@@ -391,16 +392,26 @@ private function render_group( array $attributes, array $child_blocks, string $l
  * Render a Gutenberg group with flex layout for row containers.
  *
  * @param array $attributes Block attributes.
- * @param array $child_blocks Rendered child blocks.
+ * @param array $child_data Rendered child data arrays.
  */
-private function render_row_group( array $attributes, array $child_blocks ): string {
-$attributes['layout'] = array(
-'type'           => 'flex',
-'justifyContent' => 'space-between',
-'flexWrap'       => 'wrap',
-);
+private function render_row_group( array $attributes, array $child_data ): string {
+        $attributes['layout'] = array(
+                'type'           => 'flex',
+                'justifyContent' => 'space-between',
+                'flexWrap'       => 'wrap',
+                'orientation'    => 'horizontal',
+        );
 
-        return Block_Builder::build( 'group', $attributes, implode( '', $child_blocks ) );
+        $inner_html = '';
+        foreach ( $child_data as $child ) {
+                $content = $child['content'] ?? '';
+                if ( '' === $content ) {
+                        continue;
+                }
+                $inner_html .= $content;
+        }
+
+        return Block_Builder::build( 'group', $attributes, $inner_html );
 }
 
 /**
@@ -443,7 +454,12 @@ private function render_grid_group( array $attributes, array $child_data, int $c
         $inner_html = '';
 
         foreach ( $child_data as $child ) {
-            $inner_html .= Block_Builder::build( 'column', array(), $child['content'] ?? '' );
+            $content = $child['content'] ?? '';
+            if ( '' === $content ) {
+                continue;
+            }
+
+            $inner_html .= Block_Builder::build( 'column', array(), $content );
         }
 
         return Block_Builder::build( 'columns', $attributes, $inner_html );

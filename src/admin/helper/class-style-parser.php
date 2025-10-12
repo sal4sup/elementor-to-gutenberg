@@ -78,11 +78,8 @@ public static function parse_container_styles( array $settings ): array {
         $background = self::sanitize_color( $settings['background_color'] ?? $settings['_background_color'] ?? '' );
         if ( self::is_preset_slug( $background ) ) {
             $attributes['backgroundColor'] = $background;
-        }
-
-        $custom_classes = self::sanitize_class_string( $settings['_css_classes'] ?? '' );
-        if ( '' !== $custom_classes ) {
-            $attributes['className'] = self::append_class( $attributes['className'] ?? '', $custom_classes );
+        } elseif ( '' !== $background && 1 === preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $background ) ) {
+            $attributes['style']['color']['background'] = $background;
         }
 
         return $attributes;
@@ -174,50 +171,6 @@ return self::normalize_dimension( $data[ $side ], $data['unit'] ?? 'px' );
 
 return null;
 }
-
-/**
- * Append classes safely, ensuring no duplicates.
- *
- * @param string $existing Existing class list.
- * @param string $new      New class or classes.
- */
-private static function append_class( string $existing, string $new ): string {
-$existing_list = '' === $existing ? array() : preg_split( '/\s+/', $existing );
-$new_list      = preg_split( '/\s+/', $new );
-$combined      = array();
-
-foreach ( array_merge( (array) $existing_list, (array) $new_list ) as $class ) {
-$class = trim( (string) $class );
-if ( '' === $class ) {
-continue;
-}
-$combined[ $class ] = true;
-}
-
-return implode( ' ', array_keys( $combined ) );
-}
-
-/**
- * Sanitize custom class string from Elementor.
- *
- * @param mixed $value Raw value.
- */
-private static function sanitize_class_string( $value ): string {
-        if ( ! is_string( $value ) ) {
-            return '';
-        }
-
-        $classes = array();
-        foreach ( preg_split( '/\s+/', $value ) as $class ) {
-            $sanitized = self::clean_class( $class );
-            if ( '' === $sanitized ) {
-                continue;
-            }
-            $classes[] = $sanitized;
-        }
-
-        return implode( ' ', $classes );
-    }
 
     /**
      * Sanitize a single class name while dropping Elementor-generated classes.

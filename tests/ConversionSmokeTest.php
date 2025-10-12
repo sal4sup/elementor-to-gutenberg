@@ -207,7 +207,10 @@ expect_true( str_contains( $simple_output, '<!-- wp:group {"layout":{"type":"gri
 expect_true( str_contains( $simple_output, '<!-- wp:heading' ), 'Heading block missing from simple grid.' );
 expect_true( str_contains( $simple_output, '<!-- wp:image' ), 'Image block missing from simple grid.' );
 expect_true( str_contains( $simple_output, '<!-- wp:buttons' ), 'Buttons block missing from simple grid.' );
-expect_true( str_contains( $simple_output, '<!-- wp:button {"url":"https:\/\/example.com"}' ), 'Button block should include the URL attribute.' );
+expect_true(
+    str_contains( $simple_output, '<!-- wp:button ' ) && str_contains( $simple_output, '"url":"https:\/\/example.com"' ),
+    'Button block should include the URL attribute.'
+);
 expect_true( str_contains( $simple_output, '<a class="wp-block-button__link wp-element-button" href="https://example.com">Click me</a>' ), 'Button anchor should render link markup.' );
 expect_true( ! preg_match( '/<figure[^>]+style=/', $simple_output ), 'Images should not include inline style attributes on figure.' );
 expect_true( ! preg_match( '/<img[^>]+style=/', $simple_output ), 'Images should not include inline style attributes on img tags.' );
@@ -266,7 +269,12 @@ $flex_container = array(
 );
 
 $flex_output = $converter->parse_elementor_elements( $flex_container );
-expect_true( str_contains( $flex_output, '"layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap"}' ), 'Flex container should render as flex group.' );
+expect_true(
+    str_contains( $flex_output, '"layout":{"type":"flex"' )
+    && str_contains( $flex_output, '"justifyContent":"space-between"' )
+    && str_contains( $flex_output, '"flexWrap":"wrap"' ),
+    'Flex container should render as flex group.'
+);
 expect_true( substr_count( $flex_output, '<!-- wp:group {"layout":{"type":"constrained"}} -->' ) >= 2, 'Flex children should be wrapped in constrained groups.' );
 expect_true( str_contains( $flex_output, 'has-global-padding' ), 'Boxed flex container should keep global padding class.' );
 expect_true( ! str_contains( $flex_output, 'e-con' ), 'Elementor classes should not leak into output.' );

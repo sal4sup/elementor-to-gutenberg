@@ -60,6 +60,10 @@ class Button_Widget_Handler implements Widget_Handler_Interface {
             $button_attributes['className'] = implode( ' ', array_unique( $custom_classes ) );
         }
 
+        if ( '' !== $text ) {
+            $button_attributes['text'] = wp_strip_all_tags( $text );
+        }
+
         $anchor_classes = array( 'wp-block-button__link', 'wp-element-button' );
         $anchor_style   = array();
 

@@ -57,8 +57,6 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
         }
 
         $markup_classes = $custom_classes;
-        $style_color    = '';
-
         if ( '' !== $text_color ) {
             if ( $this->is_preset_color_slug( $text_color ) ) {
                 $base_attributes['textColor'] = $text_color;
@@ -67,7 +65,6 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
             } elseif ( $this->is_hex_color( $text_color ) ) {
                 $base_attributes['style']['color']['text'] = $text_color;
                 $markup_classes[]                           = 'has-text-color';
-                $style_color                                = 'color:' . $text_color . ';';
             }
         }
 
@@ -92,13 +89,10 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
             }
 
             $element_classes = $markup_classes;
-            $style_attr      = $style_color;
-
             if ( 'paragraph' === $segment['type'] ) {
                 $paragraph_html = $this->build_paragraph_html(
                     $segment,
                     $element_classes,
-                    $style_attr,
                     $is_first ? $custom_id : ''
                 );
 
@@ -111,7 +105,6 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
                 $list_html = $this->build_list_html(
                     $segment,
                     $element_classes,
-                    $style_attr,
                     $is_first ? $custom_id : ''
                 );
 
@@ -142,12 +135,11 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
     /**
      * Build the markup for a paragraph segment.
      *
-     * @param array  $segment     Segment data containing paragraph content.
-     * @param array  $classes     Classes to apply to the paragraph element.
-     * @param string $style       Inline style declaration.
-     * @param string $custom_id   Optional anchor to apply.
+     * @param array  $segment   Segment data containing paragraph content.
+     * @param array  $classes   Classes to apply to the paragraph element.
+     * @param string $custom_id Optional anchor to apply.
      */
-    private function build_paragraph_html( array $segment, array $classes, string $style, string $custom_id ): string {
+    private function build_paragraph_html( array $segment, array $classes, string $custom_id ): string {
         $attrs = '';
 
         if ( '' !== $custom_id ) {
@@ -156,10 +148,6 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
 
         if ( ! empty( $classes ) ) {
             $attrs .= ' class="' . esc_attr( implode( ' ', array_unique( $classes ) ) ) . '"';
-        }
-
-        if ( '' !== $style ) {
-            $attrs .= ' style="' . esc_attr( $style ) . '"';
         }
 
         $inner = $segment['plain'] ? esc_html( $segment['content'] ) : wp_kses_post( $segment['content'] );
@@ -172,10 +160,9 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
      *
      * @param array  $segment   Segment data containing list information.
      * @param array  $classes   Classes to apply to the list element.
-     * @param string $style     Inline style declaration.
      * @param string $custom_id Optional anchor for the list.
      */
-    private function build_list_html( array $segment, array $classes, string $style, string $custom_id ): string {
+    private function build_list_html( array $segment, array $classes, string $custom_id ): string {
         $tag   = 'ol' === $segment['tag'] ? 'ol' : 'ul';
         $attrs = '';
 
@@ -185,10 +172,6 @@ class Text_Editor_Widget_Handler implements Widget_Handler_Interface {
 
         if ( ! empty( $classes ) ) {
             $attrs .= ' class="' . esc_attr( implode( ' ', array_unique( $classes ) ) ) . '"';
-        }
-
-        if ( '' !== $style ) {
-            $attrs .= ' style="' . esc_attr( $style ) . '"';
         }
 
         $items_html = array();
