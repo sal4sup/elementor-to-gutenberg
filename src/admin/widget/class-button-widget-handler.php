@@ -64,30 +64,19 @@ class Button_Widget_Handler implements Widget_Handler_Interface {
             $button_attributes['text'] = wp_strip_all_tags( $text );
         }
 
-        $anchor_classes = array( 'wp-block-button__link', 'wp-element-button' );
-        $anchor_style   = array();
-
         if ( '' !== $text_color ) {
             if ( $this->is_preset_color_slug( $text_color ) ) {
                 $button_attributes['textColor'] = $text_color;
-                $anchor_classes[]               = 'has-text-color';
-                $anchor_classes[]               = 'has-' . Style_Parser::clean_class( $text_color ) . '-color';
             } elseif ( $this->is_hex_color( $text_color ) ) {
                 $button_attributes['style']['color']['text'] = $text_color;
-                $anchor_classes[]                             = 'has-text-color';
-                $anchor_style[]                               = 'color:' . $text_color;
             }
         }
 
         if ( '' !== $background ) {
             if ( $this->is_preset_color_slug( $background ) ) {
                 $button_attributes['backgroundColor'] = $background;
-                $anchor_classes[]                     = 'has-background';
-                $anchor_classes[]                     = 'has-' . Style_Parser::clean_class( $background ) . '-background-color';
             } elseif ( $this->is_hex_color( $background ) ) {
                 $button_attributes['style']['color']['background'] = $background;
-                $anchor_classes[]                                   = 'has-background';
-                $anchor_style[]                                     = 'background-color:' . $background;
             }
         }
 
@@ -113,8 +102,9 @@ class Button_Widget_Handler implements Widget_Handler_Interface {
             Style_Parser::save_custom_css( $custom_css );
         }
 
-        $anchor_attrs = array();
-        $anchor_attrs[] = 'class="' . esc_attr( implode( ' ', array_unique( $anchor_classes ) ) ) . '"';
+        $anchor_classes = array( 'wp-block-button__link', 'wp-element-button' );
+        $anchor_attrs   = array();
+        $anchor_attrs[] = 'class="' . esc_attr( implode( ' ', $anchor_classes ) ) . '"';
 
         if ( '' !== $url ) {
             $anchor_attrs[] = 'href="' . $url . '"';
@@ -126,10 +116,6 @@ class Button_Widget_Handler implements Widget_Handler_Interface {
 
         if ( ! empty( $rel_tokens ) ) {
             $anchor_attrs[] = 'rel="' . esc_attr( implode( ' ', array_unique( $rel_tokens ) ) ) . '"';
-        }
-
-        if ( ! empty( $anchor_style ) ) {
-            $anchor_attrs[] = 'style="' . esc_attr( implode( ';', $anchor_style ) ) . '"';
         }
 
         $anchor_html = sprintf(

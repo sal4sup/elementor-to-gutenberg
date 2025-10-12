@@ -49,7 +49,7 @@ class Block_Builder {
 
         if ( $is_wrapper ) {
             $wrapper_class = self::build_wrapper_class( $block_slug, $attrs );
-            $style_attr    = self::build_style_attribute( $attrs );
+            $style_attr    = 'button' === $block_slug ? '' : self::build_style_attribute( $attrs );
             $wrapper_html  = sprintf(
                 '<div class="%s"%s>%s</div>',
                 esc_attr( $wrapper_class ),

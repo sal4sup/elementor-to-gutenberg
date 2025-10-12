@@ -275,8 +275,8 @@ expect_true(
     && str_contains( $flex_output, '"flexWrap":"wrap"' ),
     'Flex container should render as flex group.'
 );
-expect_true( substr_count( $flex_output, '<!-- wp:group {"layout":{"type":"constrained"}} -->' ) >= 2, 'Flex children should be wrapped in constrained groups.' );
-expect_true( str_contains( $flex_output, 'has-global-padding' ), 'Boxed flex container should keep global padding class.' );
+expect_true( substr_count( $flex_output, '<!-- wp:group -->' ) >= 2, 'Flex children should render as plain groups without layout metadata.' );
+expect_true( 2 === substr_count( $flex_output, 'has-global-padding' ), 'Only the outer boxed flex container should carry global padding.' );
 expect_true( ! str_contains( $flex_output, 'e-con' ), 'Elementor classes should not leak into output.' );
 expect_true( str_contains( $flex_output, '<p>Flex description text.</p>' ), 'Paragraph should remain a single p element.' );
 expect_true( ! preg_match( '/<p[^>]+style=/', $flex_output ), 'Paragraphs should not include inline style attributes.' );

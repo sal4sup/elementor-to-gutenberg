@@ -286,83 +286,104 @@ return $this->parse_elementor_elements( $json_data['content'] );
  *
  * @param array $elements Elementor elements array.
  */
-public function parse_elementor_elements( array $elements ): string {
-$blocks = '';
-foreach ( $elements as $element ) {
-if ( ! is_array( $element ) ) {
-continue;
-}
+    public function parse_elementor_elements( array $elements ): string {
+        $blocks = '';
+        foreach ( $elements as $element ) {
+            if ( ! is_array( $element ) ) {
+                continue;
+            }
 
-$blocks .= $this->render_element( $element );
-}
+            $blocks .= $this->render_element( $element, array() );
+        }
 
-return $blocks;
-}
+        return $blocks;
+    }
 
 /**
  * Render an Elementor element into block markup.
  *
  * @param array $element Elementor element.
  */
-private function render_element( array $element ): string {
-$el_type = $element['elType'] ?? '';
-if ( 'container' === $el_type ) {
-return $this->render_container( $element );
-}
+    private function render_element( array $element, array $context = array() ): string {
+        $el_type = $element['elType'] ?? '';
+        if ( 'container' === $el_type ) {
+            return $this->render_container( $element, $context );
+        }
 
-if ( 'widget' === $el_type ) {
-$widget_type = $element['widgetType'] ?? '';
-$handler     = Widget_Handler_Factory::get_handler( $widget_type );
-if ( null !== $handler ) {
-return $handler->handle( $element );
-}
+        if ( 'widget' === $el_type ) {
+            $widget_type = $element['widgetType'] ?? '';
+            $handler     = Widget_Handler_Factory::get_handler( $widget_type );
+            if ( null !== $handler ) {
+                return $handler->handle( $element );
+            }
 
-return $this->render_unknown_widget( $widget_type );
-}
+            return $this->render_unknown_widget( $widget_type );
+        }
 
-return $this->render_unknown_widget( $el_type ?: 'unknown' );
-}
+        return $this->render_unknown_widget( $el_type ?: 'unknown' );
+    }
 
 /**
  * Render a container element based on layout classification.
  *
  * @param array $element Elementor container element.
  */
-private function render_container( array $element ): string {
-        $children   = is_array( $element['elements'] ?? null ) ? $element['elements'] : array();
-        $child_data = array();
+    private function render_container( array $element, array $context = array() ): string {
+        $children    = is_array( $element['elements'] ?? null ) ? $element['elements'] : array();
+        $child_count = count( $children );
 
-        foreach ( $children as $child ) {
-                if ( ! is_array( $child ) ) {
-                        continue;
-                }
+        $is_grid      = Container_Classifier::is_grid( $element );
+        $use_columns  = ! $is_grid && Container_Classifier::should_use_columns( $element );
+        $is_row       = ! $is_grid && ! $use_columns && Container_Classifier::is_row( $element, $child_count );
+        $layout_label = 'group';
 
-                $child_data[] = array(
-                        'element' => $child,
-                        'content' => $this->render_element( $child ),
-                );
+        if ( $is_grid ) {
+            $layout_label = 'grid';
+        } elseif ( $use_columns ) {
+            $layout_label = 'columns';
+        } elseif ( $is_row ) {
+            $layout_label = 'flex';
         }
 
-        $child_count        = count( $children );
         $container_settings = is_array( $element['settings'] ?? null ) ? $element['settings'] : array();
         $container_attr     = Style_Parser::parse_container_styles( $container_settings );
         $container_classes  = Container_Classifier::get_element_classes( $element );
-        $container_attr     = $this->apply_container_class_adjustments( $container_attr, $container_classes );
-        if ( Container_Classifier::is_grid( $element ) ) {
-                $columns = Container_Classifier::get_grid_column_count( $element, $child_count );
+        $parent_layout      = $context['parent_layout'] ?? '';
+        $is_flex_child      = ( 'flex' === $parent_layout );
+        $container_attr     = $this->apply_container_class_adjustments( $container_attr, $container_classes, $is_flex_child );
 
-                return $this->render_grid_group( $container_attr, $child_data, $columns );
+        $child_data = array();
+        foreach ( $children as $child ) {
+            if ( ! is_array( $child ) ) {
+                continue;
+            }
+
+            $child_context = array();
+            if ( in_array( $layout_label, array( 'flex', 'grid', 'columns' ), true ) ) {
+                $child_context['parent_layout'] = $layout_label;
+            }
+
+            $child_data[] = array(
+                'element' => $child,
+                'content' => $this->render_element( $child, $child_context ),
+            );
         }
 
-        if ( Container_Classifier::should_use_columns( $element ) ) {
-                return $this->render_columns_group( $container_attr, $child_data );
+        if ( $is_grid ) {
+            $columns = Container_Classifier::get_grid_column_count( $element, $child_count );
+
+            return $this->render_grid_group( $container_attr, $child_data, $columns );
         }
 
-        if ( Container_Classifier::is_row( $element, $child_count ) ) {
-                return $this->render_row_group( $container_attr, $child_data );
+        if ( $use_columns ) {
+            return $this->render_columns_group( $container_attr, $child_data );
         }
 
-        return $this->render_group( $container_attr, $child_data );
+        if ( $is_row ) {
+            return $this->render_row_group( $container_attr, $child_data );
+        }
+
+        return $this->render_group( $container_attr, $child_data, ! $is_flex_child );
 }
 
 /**
@@ -371,9 +392,11 @@ private function render_container( array $element ): string {
  * @param array $attributes Block attributes.
  * @param array $child_data Rendered child data arrays.
  */
-private function render_group( array $attributes, array $child_data ): string {
-        if ( empty( $attributes['layout'] ) || ! is_array( $attributes['layout'] ) ) {
+    private function render_group( array $attributes, array $child_data, bool $apply_default_layout = true ): string {
+        if ( $apply_default_layout && ( empty( $attributes['layout'] ) || ! is_array( $attributes['layout'] ) ) ) {
                 $attributes['layout'] = array( 'type' => 'constrained' );
+        } elseif ( ! $apply_default_layout ) {
+                unset( $attributes['layout'] );
         }
 
         $inner_html = '';
@@ -468,10 +491,15 @@ private function render_grid_group( array $attributes, array $child_data, int $c
     /**
      * Apply Elementor container class adjustments (full/boxed) to block attributes.
      *
-     * @param array $attributes Block attributes.
-     * @param array $classes    Elementor class list.
+     * @param array $attributes   Block attributes.
+     * @param array $classes      Elementor class list.
+     * @param bool  $is_flex_child Whether the current container is rendered inside a flex parent.
      */
-    private function apply_container_class_adjustments( array $attributes, array $classes ): array {
+    private function apply_container_class_adjustments( array $attributes, array $classes, bool $is_flex_child ): array {
+        if ( $is_flex_child ) {
+            return $this->remove_class_from_attributes( $attributes, 'has-global-padding' );
+        }
+
         if ( in_array( 'e-con-boxed', $classes, true ) ) {
             $attributes = $this->add_class_to_attributes( $attributes, 'has-global-padding' );
         }
