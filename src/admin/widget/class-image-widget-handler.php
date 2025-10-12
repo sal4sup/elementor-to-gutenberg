@@ -7,9 +7,15 @@
 
 namespace Progressus\Gutenberg\Admin\Widget;
 
-use Progressus\Gutenberg\Admin\Widget_Handler_Interface;
+use Progressus\Gutenberg\Admin\Helper\Block_Builder;
 use Progressus\Gutenberg\Admin\Helper\File_Upload_Service;
 use Progressus\Gutenberg\Admin\Helper\Style_Parser;
+use Progressus\Gutenberg\Admin\Widget_Handler_Interface;
+
+use function esc_attr;
+use function esc_url;
+use function sanitize_html_class;
+use function wp_kses_post;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -17,120 +23,191 @@ defined( 'ABSPATH' ) || exit;
  * Widget handler for Elementor image widget.
  */
 class Image_Widget_Handler implements Widget_Handler_Interface {
-	/**
-	 * Handle conversion of Elementor image to Gutenberg block.
-	 *
-	 * @param array $element The Elementor element data.
-	 * @return string The Gutenberg block content.
-	 */
-	public function handle( array $element ): string {
-		$settings      = $element['settings'] ?? array();
-		$url           = $settings['image']['url'] ?? '';
-		$alt           = $settings['image']['alt'] ?? '';
-		$new_url       = File_Upload_Service::download_and_upload( $url ) ?? $url;
-		$attachment_id = ! empty( $new_url ) ? attachment_url_to_postid( $new_url ) : 0;
-		$custom_class  = $settings['_css_classes'] ?? '';
-		$custom_id     = $settings['_element_id'] ?? '';
-		$custom_css    = $settings['custom_css'] ?? '';
-		$size_slug     = 'full';
 
-		// Spacing.
-		$spacing = Style_Parser::parse_spacing( $settings );
+/**
+ * Handle conversion of Elementor image to Gutenberg block.
+ *
+ * @param array $element The Elementor element data.
+ * @return string The Gutenberg block content.
+ */
+public function handle( array $element ): string {
+        $settings    = is_array( $element['settings'] ?? null ) ? $element['settings'] : array();
+        $image       = is_array( $settings['image'] ?? null ) ? $settings['image'] : array();
+        $image_url   = isset( $image['url'] ) ? (string) $image['url'] : '';
+        $alt_text    = isset( $image['alt'] ) ? (string) $image['alt'] : '';
+        $attachment  = isset( $image['id'] ) ? (int) $image['id'] : 0;
+        $custom_id   = isset( $settings['_element_id'] ) ? trim( (string) $settings['_element_id'] ) : '';
+        $custom_css  = isset( $settings['custom_css'] ) ? (string) $settings['custom_css'] : '';
+        $custom_raw  = isset( $settings['_css_classes'] ) ? trim( (string) $settings['_css_classes'] ) : '';
+        $align       = isset( $settings['align'] ) ? trim( (string) $settings['align'] ) : '';
+        $caption     = isset( $settings['caption'] ) ? (string) $settings['caption'] : '';
 
-		$border_width  = $settings['image_border_width'] ?? array();
-		$border_radius = $settings['image_border_radius'] ?? array();
+        if ( '' === $image_url ) {
+            return '';
+        }
 
-		$border_attr      = array();
-		$border_style_css = '';
+        if ( '' !== $image_url && function_exists( 'download_url' ) ) {
+            $uploaded = File_Upload_Service::download_and_upload( $image_url );
+            if ( null !== $uploaded ) {
+                $image_url = $uploaded;
+                if ( function_exists( 'attachment_url_to_postid' ) ) {
+                    $attachment = attachment_url_to_postid( $image_url );
+                }
+            }
+        }
 
-		if ( ! empty( $border_width['top'] ) ) {
-			$border_attr['width'] = $border_width['top'] . $border_width['unit'];
-			$border_style_css .= 'border-width:' . esc_attr( $border_width['top'] . $border_width['unit'] ) . ';';
-		}
-		if ( ! empty( $border_radius['top'] ) ) {
-			$border_attr['radius'] = $border_radius['top'] . $border_radius['unit'];
-			$border_style_css .= 'border-radius:' . esc_attr( $border_radius['top'] . $border_radius['unit'] ) . ';';
-		}
+        $figure_classes = array( 'wp-block-image', 'size-full' );
+        $custom_classes = array();
 
-		// Build attributes.
-		$attrs_array = array(
-			'id'              => $attachment_id,
-			'sizeSlug'        => $size_slug,
-			'linkDestination' => $settings['link_to'] === 'custom' ? 'custom' : 'none',
-			'className'       => 'is-style-default ' . trim( $custom_class ),
-		);
+        if ( '' !== $align ) {
+            $figure_classes[] = 'align' . sanitize_html_class( $align );
+        }
 
-		if ( ! empty( $settings['align'] ) ) {
-			$custom_class .= ' align' . esc_attr( $settings['align'] );
-			$attrs_array['align'] = $settings['align'];
-		}
+        if ( '' !== $custom_raw ) {
+            foreach ( preg_split( '/\s+/', $custom_raw ) as $class ) {
+                $clean = Style_Parser::clean_class( $class );
+                if ( '' === $clean ) {
+                    continue;
+                }
+                $figure_classes[] = $clean;
+                $custom_classes[] = $clean;
+            }
+        }
 
-		// Width from Elementor.
-		if ( isset( $settings['width']['size'] ) && '' !== $settings['width']['size'] ) {
-			$attrs_array['width'] = $settings['width']['size'] . ( $settings['width']['unit'] ?? 'px' );
-		}
+        $image_attrs = array(
+            'sizeSlug'        => 'full',
+            'linkDestination' => $this->map_link_destination( $settings ),
+        );
 
-		if ( ! empty( $spacing['attributes'] ) ) {
-			$attrs_array['style']['spacing'] = $spacing['attributes'];
-		}
-		if ( ! empty( $border_attr ) ) {
-			$attrs_array['style']['border'] = $border_attr;
-		}
+        if ( $attachment > 0 ) {
+            $image_attrs['id'] = $attachment;
+        }
 
-		// Classes for figure.
-		$figure_class = 'wp-block-image size-' . $size_slug;
-		if ( isset( $attrs_array['width'] ) ) {
-			$figure_class .= ' is-resized';
-		}
-		if ( ! empty( $border_attr ) ) {
-			$figure_class .= ' has-custom-border';
-		}
-		$figure_class .= ' is-style-default ' . trim( $custom_class );
+        if ( '' !== $image_url ) {
+            $image_attrs['url'] = $image_url;
+        }
 
-		// Inline style for <figure>.
-		$figure_style = $spacing['style'];
+        if ( '' !== $align ) {
+            $image_attrs['align'] = $align;
+        }
 
-		// Inline style for <img>.
-		$img_style = $border_style_css;
-		if ( isset( $attrs_array['width'] ) ) {
-			$img_style .= 'width:' . esc_attr( $attrs_array['width'] ) . ';';
-		}
+        if ( ! empty( $custom_classes ) ) {
+            $image_attrs['className'] = implode( ' ', array_unique( $custom_classes ) );
+        }
 
-		// Encode attrs.
-		$attrs = wp_json_encode( $attrs_array );
+        if ( '' !== $custom_id ) {
+            $image_attrs['anchor'] = $custom_id;
+        }
 
-		// <img> tag.
-		$img_tag = sprintf(
-			'<img src="%s" alt="%s" class="wp-image-%d"%s />',
-			esc_url( $new_url ),
-			esc_attr( $alt ),
-			esc_attr( $attachment_id ),
-			$img_style ? ' style="' . esc_attr( $img_style ) . '"' : ''
-		);
+        $width = $this->normalize_dimension( $settings['width'] ?? null );
+        if ( null !== $width ) {
+            $image_attrs['width'] = is_numeric( $width ) ? (float) $width : $width;
+            if ( '100%' !== $width ) {
+                $figure_classes[] = 'is-resized';
+            }
+        }
 
-		// Wrap with <a> if link_to = custom.
-		if ( $settings['link_to'] === 'custom' && ! empty( $settings['link']['url'] ) ) {
-			$img_tag = sprintf(
-				'<a href="%s">%s</a>',
-				esc_url( $settings['link']['url'] ),
-				$img_tag
-			);
-		}
+        $img_attributes = array();
+        if ( $attachment > 0 ) {
+            $img_attributes[] = 'class="wp-image-' . esc_attr( (string) $attachment ) . '"';
+        }
 
-		// Final block.
-		$block_content = sprintf(
-			'<!-- wp:image %1s --><figure id="%2s" class="%3s"%4s>%5s</figure><!-- /wp:image -->' . "\n",
-			$attrs,
-			esc_attr( $custom_id ),
-			esc_attr( trim( $figure_class ) ),
-			$figure_style ? ' style="' . esc_attr( $figure_style ) . '"' : '',
-			$img_tag
-		);
+        if ( null !== $width && is_numeric( $width ) ) {
+            $img_attributes[] = 'width="' . esc_attr( $width ) . '"';
+        }
 
-		if ( ! empty( $custom_css ) ) {
-			Style_Parser::save_custom_css( $custom_css );
-		}
+        $img_attributes[] = 'src="' . esc_url( $image_url ) . '"';
+        $img_attributes[] = 'alt="' . esc_attr( $alt_text ) . '"';
 
-		return $block_content;
-	}
+        $img_html = '<img ' . implode( ' ', $img_attributes ) . ' />';
+
+        if ( 'custom' === ( $settings['link_to'] ?? '' ) && ! empty( $settings['link']['url'] ?? '' ) ) {
+            $img_html = sprintf( '<a href="%s">%s</a>', esc_url( (string) $settings['link']['url'] ), $img_html );
+        }
+
+        if ( '' !== $caption ) {
+            $img_html .= sprintf( '<figcaption>%s</figcaption>', wp_kses_post( $caption ) );
+        }
+
+        $figure_attrs = array();
+
+        if ( '' !== $custom_id ) {
+            $figure_attrs[] = 'id="' . esc_attr( $custom_id ) . '"';
+        }
+
+        $figure_attrs[] = 'class="' . esc_attr( implode( ' ', array_unique( $figure_classes ) ) ) . '"';
+
+        $figure_html = sprintf( '<figure %s>%s</figure>', implode( ' ', $figure_attrs ), $img_html );
+
+        if ( '' !== $custom_css ) {
+            Style_Parser::save_custom_css( $custom_css );
+        }
+
+        return Block_Builder::build( 'image', $image_attrs, $figure_html );
+    }
+
+    /**
+     * Map Elementor link destination to Gutenberg setting.
+     *
+     * @param array $settings Elementor settings.
+     */
+    private function map_link_destination( array $settings ): string {
+        $link_to = isset( $settings['link_to'] ) ? (string) $settings['link_to'] : 'none';
+        if ( 'custom' === $link_to ) {
+            return 'custom';
+        }
+        if ( 'media' === $link_to ) {
+            return 'media';
+        }
+        return 'none';
+    }
+
+    /**
+     * Normalize dimension values from Elementor settings.
+     *
+     * @param mixed $value Raw value.
+     */
+    private function normalize_dimension( $value ): ?string {
+        if ( null === $value ) {
+            return null;
+        }
+
+        if ( is_array( $value ) ) {
+            $size = $value['size'] ?? $value['value'] ?? null;
+            $unit = isset( $value['unit'] ) ? trim( (string) $value['unit'] ) : '';
+
+            if ( null === $size ) {
+                return null;
+            }
+
+            if ( '' === $unit ) {
+                return $this->normalize_dimension( $size );
+            }
+
+            return $this->normalize_dimension( $size . $unit );
+        }
+
+        if ( is_numeric( $value ) ) {
+            return (string) (float) $value;
+        }
+
+        $string_value = trim( (string) $value );
+        if ( '' === $string_value ) {
+            return null;
+        }
+
+        if ( preg_match( '/^([0-9.]+)px$/i', $string_value, $matches ) ) {
+            return (string) (float) $matches[1];
+        }
+
+        if ( preg_match( '/^100%$/', $string_value ) ) {
+            return '100%';
+        }
+
+        if ( preg_match( '/^([0-9.]+)%$/', $string_value, $percent_matches ) ) {
+            return $percent_matches[1] . '%';
+        }
+
+        return $string_value;
+    }
 }

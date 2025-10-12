@@ -6,6 +6,8 @@
  */
 namespace Progressus\Gutenberg\Admin\Helper;
 
+use function sanitize_html_class;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -13,164 +15,280 @@ defined( 'ABSPATH' ) || exit;
  */
 class Style_Parser {
 
-	/**
-	 * Parse typography settings from Elementor settings.
-	 *
-	 * @param array $settings The Elementor settings array.
-	 * @return array Array containing 'attributes' and 'style' keys.
-	 */
-	public static function parse_typography( array $settings ): array {
-		$attrs = array();
-		$style = '';
+/**
+ * Parse typography settings from Elementor settings.
+ *
+ * @param array $settings The Elementor settings array.
+ *
+ * @return array{attributes:array, style:string}
+ */
+    public static function parse_typography( array $settings ): array {
+        // Typography settings are intentionally ignored to avoid inline font styling
+        // that does not round-trip with Gutenberg serialization.
+        unset( $settings );
 
-		$typography_fields = array(
-			'typography_font_family'     => array( 'attr' => 'fontFamily', 'style' => 'font-family' ),
-			'typography_text_transform'  => array( 'attr' => 'textTransform', 'style' => 'text-transform' ),
-			'typography_font_size'       => array( 'attr' => 'fontSize', 'style' => 'font-size', 'is_array' => true ),
-			'typography_font_weight'     => array( 'attr' => 'fontWeight', 'style' => 'font-weight' ),
-			'typography_line_height'     => array( 'attr' => 'lineHeight', 'style' => 'line-height', 'is_array' => true ),
-			'typography_font_style'      => array( 'attr' => 'fontStyle', 'style' => 'font-style' ),
-			'typography_text_decoration' => array( 'attr' => 'textDecoration', 'style' => 'text-decoration' ),
-			'typography_letter_spacing'  => array( 'attr' => 'letterSpacing', 'style' => 'letter-spacing', 'is_array' => true ),
-			'typography_word_spacing'    => array( 'attr' => 'wordSpacing', 'style' => 'word-spacing', 'is_array' => true ),
-		);
+        return array(
+            'attributes' => array(),
+            'style'      => '',
+        );
+    }
 
-		foreach ( $typography_fields as $key => $field ) {
-			if ( ! isset( $settings[ $key ] ) ) {
-				continue;
-			}
+/**
+ * Parse spacing settings from Elementor settings.
+ *
+ * @param array $settings Elementor settings array.
+ *
+ * @return array{attributes:array, style:string}
+ */
+    public static function parse_spacing( array $settings ): array {
+        unset( $settings );
 
-			if ( ! empty( $field['is_array'] ) ) {
-				$size = $settings[ $key ]['size'] ?? '';
-				$unit = $settings[ $key ]['unit'] ?? ( 'typography_line_height' === $key ? '' : 'px' );
-				if ( '' !== $size && is_numeric( $size ) ) {
-					$value = $size . $unit;
-					$attrs[ $field['attr'] ] = $value;
-					$style .= sprintf( '%s:%s;', $field['style'], esc_attr( $value ) );
-				}
-			} else {
-				$value = $settings[ $key ];
-				if ( '' !== $value ) {
-					$attrs[ $field['attr'] ] = $value;
-					$style .= sprintf( '%s:%s;', $field['style'], esc_attr( $value ) );
-				}
-			}
-		}
+        return array(
+            'attributes' => array(),
+            'style'      => '',
+        );
+    }
 
-		return array(
-			'attributes' => $attrs,
-			'style'      => $style,
-		);
-	}
+/**
+ * Parse border settings safely.
+ *
+ * @param array $settings Elementor settings array.
+ *
+ * @return array{attributes:array, style:string}
+ */
+    public static function parse_border( array $settings ): array {
+        unset( $settings );
 
-	/**
-	 * Parse spacing settings from Elementor settings.
-	 *
-	 * @param array $settings The Elementor settings array.
-	 * @return array Array containing 'attributes' and 'style' keys.
-	 */
-	public static function parse_spacing( array $settings ): array {
-		$attrs = array();
-		$style = '';
+        return array(
+            'attributes' => array(),
+            'style'      => '',
+        );
+    }
 
-		foreach ( array( 'padding', 'margin' ) as $spacing ) {
-			$key = '_' . $spacing;
-			if ( ! isset( $settings[ $key ] ) || ! is_array( $settings[ $key ] ) ) {
-				continue;
-			}
+/**
+ * Parse container specific styles into block attributes.
+ *
+ * @param array $settings Elementor settings array.
+ *
+ * @return array
+ */
+    public static function parse_container_styles( array $settings ): array {
+        $attributes = array();
 
-			$unit = $settings[ $key ]['unit'] ?? 'px';
+        $background = self::sanitize_color( $settings['background_color'] ?? $settings['_background_color'] ?? '' );
+        if ( self::is_preset_slug( $background ) ) {
+            $attributes['backgroundColor'] = $background;
+        } elseif ( '' !== $background && 1 === preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $background ) ) {
+            $attributes['style']['color']['background'] = $background;
+        }
 
-			foreach ( array( 'top', 'bottom', 'left', 'right' ) as $side ) {
-				if ( isset( $settings[ $key ][ $side ] ) && '' !== $settings[ $key ][ $side ] ) {
-					$value = $settings[ $key ][ $side ] . $unit;
-					$attrs[ $spacing ][ $side ] = $value;
-					$style .= sprintf( '%s-%s:%s;', $spacing, $side, esc_attr( $value ) );
-				}
-			}
-		}
+        return $attributes;
+}
 
-		return array(
-			'attributes' => $attrs ? : array(),
-			'style'      => $style,
-		);
-	}
+/**
+ * Determine if the supplied color is a preset slug.
+ *
+ * @param string $color Color string.
+ */
+    private static function is_preset_slug( string $color ): bool {
+        return '' !== $color && false === strpos( $color, '#' ) && 0 !== strpos( $color, 'rgb' );
+    }
 
-	/**
-	 * Parse border settings from Elementor settings.
-	 *
-	 * @param array $settings The Elementor settings array.
-	 * @return array Array containing 'attributes' and 'style' keys.
-	 */
-	public static function parse_border( array $settings ): array {
-		$attrs = array();
-		$style = '';
+/**
+ * Sanitize a scalar value from Elementor settings.
+ *
+ * @param mixed $value Raw value.
+ */
+    private static function sanitize_scalar( $value ): string {
+        if ( is_array( $value ) ) {
+            return '';
+        }
 
-		// Map Elementor sides to Gutenberg sides.
-		$radius_map = array(
-			'top'    => array( 'topLeft', 'top-left' ),
-			'right'  => array( 'topRight', 'top-right' ),
-			'bottom' => array( 'bottomRight', 'bottom-right' ),
-			'left'   => array( 'bottomLeft', 'bottom-left' ),
-		);
+$value = is_bool( $value ) ? ( $value ? '1' : '0' ) : (string) $value;
 
-		// Border radius.
-		if ( isset( $settings['_border_radius'] ) && is_array( $settings['_border_radius'] ) ) {
-			$unit = $settings['_border_radius']['unit'] ?? 'px';
-			foreach ( $radius_map as $el_side => $gb_side ) {
-				if ( isset( $settings['_border_radius'][ $el_side ] ) && $settings['_border_radius'][ $el_side ] !== '' ) {
-					$value = $settings['_border_radius'][ $el_side ] . $unit;
-					$attrs['radius'][ $gb_side[0] ] = $value;
-					$style .= sprintf( 'border-%s-radius:%s;', 
-						$gb_side[1],
-						esc_attr( $value )
-					);
-				}
-			}
-		}
+return trim( $value );
+}
 
-		// Border width + color per side.
-		if ( isset( $settings['_border_width'] ) && is_array( $settings['_border_width'] ) ) {
-			$unit = $settings['_border_width']['unit'] ?? 'px';
-			$color = ! empty( $settings['border_color'] ) ? strtolower( $settings['border_color'] ) : '';
+/**
+ * Normalize color strings.
+ *
+ * @param mixed $value Potential color value.
+ */
+    private static function sanitize_color( $value ): string {
+        if ( is_array( $value ) ) {
+            $value = $value['value'] ?? $value['color'] ?? '';
+        }
 
-			foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
-				if ( isset( $settings['_border_width'][ $side ] ) && $settings['_border_width'][ $side ] !== '' ) {
-					$width = $settings['_border_width'][ $side ] . $unit;
-					$attrs[ $side ]['width'] = $width;
-					$style .= sprintf( 'border-%s-width:%s;', $side, esc_attr( $width ) );
+        return strtolower( self::sanitize_scalar( $value ) );
+    }
 
-					if ( $color ) {
-						$attrs[ $side ]['color'] = $color;
-						$style .= sprintf( 'border-%s-color:%s;', $side, esc_attr( $color ) );
-					}
-				}
-			}
-		}
+    /**
+     * Normalize Elementor dimension value into a CSS string suitable for block attributes.
+     *
+     * @param mixed  $value        Raw value from Elementor settings.
+     * @param string $default_unit Default unit when none is provided.
+     *
+     * @return string|null Normalized dimension or null when not applicable.
+     */
+    public static function normalize_dimension_value( $value, string $default_unit = 'px' ): ?string {
+        if ( is_array( $value ) ) {
+            if ( isset( $value['size'] ) ) {
+                return self::normalize_dimension_value( $value['size'], $value['unit'] ?? $default_unit );
+            }
 
-		// Border style (solid, dashed, etc.)
-		if ( ! empty( $settings['_border_border'] ) ) {
-			$attrs['style'] = $settings['_border_border'];
-			$style .= 'border-style:' . esc_attr( $settings['_border_border'] ) . ';';
-		}
+            if ( isset( $value['value'] ) ) {
+                return self::normalize_dimension_value( $value['value'], $value['unit'] ?? $default_unit );
+            }
+        }
 
-		return array(
-			'attributes' => $attrs ? : array(),
-			'style'      => $style,
-		);
-	}
+        if ( null === $value || '' === $value ) {
+            return null;
+        }
 
+        if ( is_numeric( $value ) ) {
+            $number = (string) ( 0 + $value );
 
-	/**
-	 * Save custom CSS to the Customizer's Additional CSS.
-	 *
-	 * @param string $css The CSS string.
-	 */
-	public static function save_custom_css( string $css ) {
-		$customizer_css_post = wp_get_custom_css_post();
-		$existing_css        = $customizer_css_post ? $customizer_css_post->post_content : '';
-		$new_css             = $existing_css . "\n" . $css;
+            return $number . ( '' === $default_unit ? '' : $default_unit );
+        }
 
-		wp_update_custom_css_post( $new_css );
-	}
+        $string_value = trim( (string) $value );
+        if ( '' === $string_value ) {
+            return null;
+        }
+
+        if ( preg_match( '/^[0-9.]+$/', $string_value ) ) {
+            return $string_value . ( '' === $default_unit ? '' : $default_unit );
+        }
+
+        return $string_value;
+    }
+
+    /**
+     * Parse an Elementor box control into individual CSS values.
+     *
+     * @param mixed  $value        Elementor box control value.
+     * @param string $default_unit Default unit when none provided.
+     *
+     * @return array<string,string> Associative array of side => value pairs.
+     */
+    public static function parse_box_sides( $value, string $default_unit = 'px' ): array {
+        if ( ! is_array( $value ) ) {
+            return array();
+        }
+
+        $unit   = isset( $value['unit'] ) ? (string) $value['unit'] : $default_unit;
+        $result = array();
+
+        foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+            if ( array_key_exists( $side, $value ) ) {
+                $normalized = self::normalize_dimension_value( $value[ $side ], $unit );
+                if ( null !== $normalized ) {
+                    $result[ $side ] = $normalized;
+                }
+            }
+        }
+
+        if ( empty( $result ) && isset( $value['size'] ) ) {
+            $normalized = self::normalize_dimension_value( $value['size'], $unit );
+            if ( null !== $normalized ) {
+                foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+                    $result[ $side ] = $normalized;
+                }
+            }
+        }
+
+        if ( empty( $result ) && isset( $value['value'] ) ) {
+            $normalized = self::normalize_dimension_value( $value['value'], $unit );
+            if ( null !== $normalized ) {
+                foreach ( array( 'top', 'right', 'bottom', 'left' ) as $side ) {
+                    $result[ $side ] = $normalized;
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Sanitize a single class name while dropping Elementor-generated classes.
+     *
+     * @param string $class Raw class name.
+     *
+     * @return string Sanitized class name or empty string if disallowed.
+     */
+    public static function clean_class( string $class ): string {
+        $class = trim( $class );
+        if ( '' === $class ) {
+            return '';
+        }
+
+        $sanitized = sanitize_html_class( $class );
+        if ( '' === $sanitized ) {
+            return '';
+        }
+
+        if ( self::is_disallowed_elementor_class( $sanitized ) ) {
+            return '';
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Determine if a class should be stripped because it's Elementor-specific.
+     *
+     * @param string $class Sanitized class name.
+     */
+    private static function is_disallowed_elementor_class( string $class ): bool {
+        $blocked_exact = array(
+            'e-con',
+            'e-con-full',
+            'e-con-boxed',
+            'e-con-child',
+            'e-grid',
+        );
+
+        if ( in_array( $class, $blocked_exact, true ) ) {
+            return true;
+        }
+
+        $blocked_prefixes = array(
+            'elementor',
+            'elementor-',
+            'elementor_',
+            'e-con-',
+            'e-grid-',
+            'wp-elements-',
+        );
+
+        foreach ( $blocked_prefixes as $prefix ) {
+            if ( 0 === strpos( $class, $prefix ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+/**
+ * Save custom CSS to the Customizer's Additional CSS store when available.
+ *
+ * @param string $css CSS string to append.
+ */
+public static function save_custom_css( string $css ): void {
+$css = trim( $css );
+if ( '' === $css ) {
+return;
+}
+
+if ( ! function_exists( 'wp_get_custom_css_post' ) || ! function_exists( 'wp_update_custom_css_post' ) ) {
+return;
+}
+
+$customizer_css_post = wp_get_custom_css_post();
+$existing_css        = $customizer_css_post ? (string) $customizer_css_post->post_content : '';
+$new_css             = rtrim( $existing_css ) . "\n" . $css;
+
+wp_update_custom_css_post( $new_css );
+}
 }

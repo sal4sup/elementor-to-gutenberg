@@ -5,7 +5,14 @@
  * @package Progressus\Gutenberg
  */
 namespace Progressus\Gutenberg\Admin;
+
+use Progressus\Gutenberg\Admin\Helper\Block_Builder;
 use Progressus\Gutenberg\Admin\Helper\File_Upload_Service;
+use Progressus\Gutenberg\Admin\Helper\Style_Parser;
+use Progressus\Gutenberg\Admin\Layout\Container_Classifier;
+
+use function esc_html;
+use function esc_html__;
 defined( 'ABSPATH' ) || exit;
 /**
  * Main admin settings class for Elementor to Gutenberg conversion.
@@ -266,47 +273,425 @@ class Admin_Settings {
 	 * @param array $json_data The JSON data to convert.
 	 * @return string The converted Gutenberg content.
 	 */
-	public function convert_json_to_gutenberg_content( array $json_data ): string {
-		if ( ! isset( $json_data['content'] ) || ! is_array( $json_data['content'] ) ) {
-			return '';
-		}
-		return $this->parse_elementor_elements( $json_data['content'] );
-	}
+public function convert_json_to_gutenberg_content( array $json_data ): string {
+if ( empty( $json_data['content'] ) || ! is_array( $json_data['content'] ) ) {
+return '';
+}
 
-	/**
-	 * Parse Elementor elements to Gutenberg blocks.
-	 *
-	 * @param array $elements The Elementor elements array.
-	 * @return string The converted Gutenberg block content.
-	 */
-	public function parse_elementor_elements( array $elements ): string {
-		$block_content = '';
-		foreach ( $elements as $element ) {
-			if ( isset( $element['elType'] ) && 'container' === $element['elType'] ) {
-				$inner = ! empty( $element['elements'] ) ? $this->parse_elementor_elements( $element['elements'] ) : '';
-				$block_content .= sprintf(
-					'<!-- wp:group --><div class="wp-block-group">%s</div><!-- /wp:group -->' . "\n",
-					$inner
-				);
-			} elseif ( isset( $element['elType'] ) && 'widget' === $element['elType'] ) {
+return $this->parse_elementor_elements( $json_data['content'] );
+}
 
-				$handler = Widget_Handler_Factory::get_handler( $element['widgetType'] );
-				if ( null !== $handler ) {
-					$block_content .= $handler->handle( $element );
-				} else {
-					$block_content .= sprintf(
-						'<!-- wp:paragraph -->%s<!-- /wp:paragraph -->' . "\n",
-						esc_html( $element['widgetType'] )
-					);
-				}
+/**
+ * Parse Elementor elements to Gutenberg blocks.
+ *
+ * @param array $elements Elementor elements array.
+ */
+    public function parse_elementor_elements( array $elements ): string {
+        $blocks = '';
+        foreach ( $elements as $element ) {
+            if ( ! is_array( $element ) ) {
+                continue;
+            }
 
-			} else {
-				$block_content .= sprintf(
-					'<!-- wp:paragraph -->%s<!-- /wp:paragraph -->' . "\n",
-					esc_html__( 'Unknown element', 'elementor-to-gutenberg' )
-				);
-			}
-		}
-		return $block_content;
-	}
+            $blocks .= $this->render_element( $element, array() );
+        }
+
+        return $blocks;
+    }
+
+/**
+ * Render an Elementor element into block markup.
+ *
+ * @param array $element Elementor element.
+ */
+    private function render_element( array $element, array $context = array() ): string {
+        $el_type = $element['elType'] ?? '';
+        if ( 'container' === $el_type ) {
+            return $this->render_container( $element, $context );
+        }
+
+        if ( 'widget' === $el_type ) {
+            $widget_type = $element['widgetType'] ?? '';
+            $handler     = Widget_Handler_Factory::get_handler( $widget_type );
+            if ( null !== $handler ) {
+                return $handler->handle( $element );
+            }
+
+            return $this->render_unknown_widget( $widget_type );
+        }
+
+        return $this->render_unknown_widget( $el_type ?: 'unknown' );
+    }
+
+/**
+ * Render a container element based on layout classification.
+ *
+ * @param array $element Elementor container element.
+ */
+    private function render_container( array $element, array $context = array() ): string {
+        $children    = is_array( $element['elements'] ?? null ) ? $element['elements'] : array();
+        $child_count = count( $children );
+
+        $is_grid      = Container_Classifier::is_grid( $element );
+        $use_columns  = ! $is_grid && Container_Classifier::should_use_columns( $element );
+        $is_row       = ! $is_grid && ! $use_columns && Container_Classifier::is_row( $element, $child_count );
+        $layout_label = 'group';
+
+        if ( $is_grid ) {
+            $layout_label = 'grid';
+        } elseif ( $use_columns ) {
+            $layout_label = 'columns';
+        } elseif ( $is_row ) {
+            $layout_label = 'flex';
+        }
+
+        $container_settings = is_array( $element['settings'] ?? null ) ? $element['settings'] : array();
+        $container_attr     = Style_Parser::parse_container_styles( $container_settings );
+        $container_classes  = Container_Classifier::get_element_classes( $element );
+        $parent_layout      = $context['parent_layout'] ?? '';
+        $is_flex_child      = ( 'flex' === $parent_layout );
+        $container_attr     = $this->apply_container_class_adjustments( $container_attr, $container_classes, $is_flex_child );
+
+        $child_data = array();
+        foreach ( $children as $child ) {
+            if ( ! is_array( $child ) ) {
+                continue;
+            }
+
+            $child_context = array();
+            if ( in_array( $layout_label, array( 'flex', 'grid', 'columns' ), true ) ) {
+                $child_context['parent_layout'] = $layout_label;
+            }
+
+            $child_data[] = array(
+                'element' => $child,
+                'content' => $this->render_element( $child, $child_context ),
+            );
+        }
+
+        if ( $is_grid ) {
+            $columns = Container_Classifier::get_grid_column_count( $element, $child_count );
+
+            return $this->render_grid_group( $container_attr, $child_data, $columns );
+        }
+
+        if ( $use_columns ) {
+            return $this->render_columns_group( $container_attr, $child_data );
+        }
+
+        if ( $is_row ) {
+            return $this->render_row_group( $container_attr, $child_data, $container_settings );
+        }
+
+        return $this->render_group( $container_attr, $child_data, ! $is_flex_child );
+}
+
+/**
+ * Render a Gutenberg group with constrained layout.
+ *
+ * @param array $attributes Block attributes.
+ * @param array $child_data Rendered child data arrays.
+ */
+    private function render_group( array $attributes, array $child_data, bool $apply_default_layout = true ): string {
+        if ( $apply_default_layout && ( empty( $attributes['layout'] ) || ! is_array( $attributes['layout'] ) ) ) {
+                $attributes['layout'] = array( 'type' => 'constrained' );
+        } elseif ( ! $apply_default_layout ) {
+                unset( $attributes['layout'] );
+        }
+
+        $inner_html = '';
+        foreach ( $child_data as $child ) {
+                $content = $child['content'] ?? '';
+                if ( '' === $content ) {
+                        continue;
+                }
+                $inner_html .= $content;
+        }
+
+        return Block_Builder::build( 'group', $attributes, $inner_html );
+}
+
+/**
+ * Render a Gutenberg group with flex layout for row containers.
+ *
+ * @param array $attributes Block attributes.
+ * @param array $child_data Rendered child data arrays.
+ */
+private function render_row_group( array $attributes, array $child_data, array $settings ): string {
+        $attributes['layout'] = $this->build_flex_layout_configuration( $settings );
+        $attributes           = $this->apply_flex_gap_to_attributes( $attributes, $settings );
+
+        $inner_html = '';
+        foreach ( $child_data as $child ) {
+                $content = $child['content'] ?? '';
+                if ( '' === $content ) {
+                        continue;
+                }
+                $inner_html .= $content;
+        }
+
+        return Block_Builder::build( 'group', $attributes, $inner_html );
+}
+
+    /**
+     * Build Gutenberg flex layout configuration from Elementor settings.
+     *
+     * @param array $settings Elementor container settings.
+     */
+    private function build_flex_layout_configuration( array $settings ): array {
+        $layout = array(
+            'type'        => 'flex',
+            'orientation' => 'horizontal',
+        );
+
+        $direction = Container_Classifier::get_flex_direction( $settings );
+        if ( in_array( $direction, array( 'column', 'column-reverse' ), true ) ) {
+            $layout['orientation'] = 'vertical';
+        }
+
+        $justify = strtolower( (string) ( $settings['flex_justify_content'] ?? $settings['justify_content'] ?? '' ) );
+        $justify = $justify ?: strtolower( (string) ( $settings['horizontal_align'] ?? '' ) );
+
+        $allowed_justify = array(
+            'flex-start',
+            'flex-end',
+            'center',
+            'space-between',
+            'space-around',
+            'space-evenly',
+            'left',
+            'right',
+        );
+
+        if ( in_array( $justify, $allowed_justify, true ) ) {
+            $layout['justifyContent'] = $justify;
+        } else {
+            $layout['justifyContent'] = 'space-between';
+        }
+
+        $wrap_candidates = array(
+            $settings['flex_wrap'] ?? null,
+            $settings['flex_wrap_tablet'] ?? null,
+            $settings['flex_wrap_mobile'] ?? null,
+        );
+
+        $wrap = null;
+        foreach ( $wrap_candidates as $candidate ) {
+            if ( ! is_string( $candidate ) ) {
+                continue;
+            }
+
+            $normalized = strtolower( trim( $candidate ) );
+            if ( '' === $normalized ) {
+                continue;
+            }
+
+            if ( in_array( $normalized, array( 'nowrap', 'wrap' ), true ) ) {
+                $wrap = $normalized;
+                break;
+            }
+
+            if ( 'wrap-reverse' === $normalized ) {
+                $wrap = 'wrap';
+                break;
+            }
+        }
+
+        $layout['flexWrap'] = $wrap ?? 'nowrap';
+
+        return $layout;
+    }
+
+    /**
+     * Apply flex gap spacing from Elementor settings to block attributes.
+     *
+     * @param array $attributes Existing block attributes.
+     * @param array $settings   Elementor settings array.
+     */
+    private function apply_flex_gap_to_attributes( array $attributes, array $settings ): array {
+        $gap_sources = array(
+            $settings['flex_gap'] ?? null,
+            $settings['gap'] ?? null,
+        );
+
+        foreach ( $gap_sources as $gap ) {
+            $normalized = Style_Parser::normalize_dimension_value( $gap );
+            if ( null === $normalized && is_array( $gap ) ) {
+                $normalized = Style_Parser::normalize_dimension_value( $gap['size'] ?? $gap['value'] ?? null, $gap['unit'] ?? 'px' );
+            }
+
+            if ( null !== $normalized ) {
+                $attributes['style']['spacing']['blockGap'] = $normalized;
+                break;
+            }
+        }
+
+        if ( isset( $attributes['style']['spacing']['blockGap'] ) && '' === $attributes['style']['spacing']['blockGap'] ) {
+            unset( $attributes['style']['spacing']['blockGap'] );
+        }
+
+        if ( isset( $attributes['style'] ) && empty( $attributes['style'] ) ) {
+            unset( $attributes['style'] );
+        }
+
+        return $attributes;
+    }
+
+/**
+ * Render a Gutenberg grid layout group.
+ *
+ * @param array $attributes  Block attributes.
+ * @param array $child_blocks Rendered child blocks.
+ * @param int   $columns      Number of columns.
+ */
+private function render_grid_group( array $attributes, array $child_data, int $columns ): string {
+        $attributes['layout'] = array(
+                'type'        => 'grid',
+                'columnCount' => max( 1, $columns ),
+        );
+
+        $inner_html = '';
+        foreach ( $child_data as $child ) {
+                $content = $child['content'] ?? '';
+                if ( '' === $content ) {
+                        continue;
+                }
+
+                $inner_html .= Block_Builder::build(
+                        'group',
+                        array( 'layout' => array( 'type' => 'constrained' ) ),
+                        $content
+                );
+        }
+
+        return Block_Builder::build( 'group', $attributes, $inner_html );
+}
+
+    /**
+     * Render a Gutenberg columns block for typical three/four card rows.
+     *
+     * @param array $attributes  Block attributes.
+     * @param array $child_data  Child element data with rendered content.
+     */
+    private function render_columns_group( array $attributes, array $child_data ): string {
+        $inner_html = '';
+
+        foreach ( $child_data as $child ) {
+            $content = $child['content'] ?? '';
+            if ( '' === $content ) {
+                continue;
+            }
+
+            $inner_html .= Block_Builder::build( 'column', array(), $content );
+        }
+
+        return Block_Builder::build( 'columns', $attributes, $inner_html );
+    }
+
+    /**
+     * Apply Elementor container class adjustments (full/boxed) to block attributes.
+     *
+     * @param array $attributes   Block attributes.
+     * @param array $classes      Elementor class list.
+     * @param bool  $is_flex_child Whether the current container is rendered inside a flex parent.
+     */
+    private function apply_container_class_adjustments( array $attributes, array $classes, bool $is_flex_child ): array {
+        if ( $is_flex_child ) {
+            return $this->remove_class_from_attributes( $attributes, 'has-global-padding' );
+        }
+
+        if ( in_array( 'e-con-boxed', $classes, true ) ) {
+            $attributes = $this->add_class_to_attributes( $attributes, 'has-global-padding' );
+        }
+
+        if ( in_array( 'e-con-full', $classes, true ) ) {
+            $attributes = $this->remove_class_from_attributes( $attributes, 'has-global-padding' );
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Add a className entry to block attributes.
+     *
+     * @param array  $attributes Block attributes.
+     * @param string $class      Class to add.
+     */
+    private function add_class_to_attributes( array $attributes, string $class ): array {
+        $sanitized = Style_Parser::clean_class( $class );
+        if ( '' === $sanitized ) {
+            return $attributes;
+        }
+
+        $existing = isset( $attributes['className'] ) ? preg_split( '/\s+/', $attributes['className'] ) : array();
+        $existing = is_array( $existing ) ? array_filter( $existing ) : array();
+        $existing[] = $sanitized;
+
+        $unique = array();
+        foreach ( $existing as $item ) {
+            $item = Style_Parser::clean_class( $item );
+            if ( '' === $item ) {
+                continue;
+            }
+            $unique[ $item ] = true;
+        }
+
+        if ( empty( $unique ) ) {
+            unset( $attributes['className'] );
+            return $attributes;
+        }
+
+        $attributes['className'] = implode( ' ', array_keys( $unique ) );
+
+        return $attributes;
+    }
+
+    /**
+     * Remove a class from block attributes if present.
+     *
+     * @param array  $attributes Block attributes.
+     * @param string $class      Class to remove.
+     */
+    private function remove_class_from_attributes( array $attributes, string $class ): array {
+        if ( empty( $attributes['className'] ) ) {
+            return $attributes;
+        }
+
+        $target    = Style_Parser::clean_class( $class );
+        $classlist = preg_split( '/\s+/', (string) $attributes['className'] );
+        $classlist = is_array( $classlist ) ? array_filter( $classlist ) : array();
+
+        $filtered = array();
+        foreach ( $classlist as $item ) {
+            $item = Style_Parser::clean_class( $item );
+            if ( '' === $item || $item === $target ) {
+                continue;
+            }
+            $filtered[ $item ] = true;
+        }
+
+        if ( empty( $filtered ) ) {
+            unset( $attributes['className'] );
+        } else {
+            $attributes['className'] = implode( ' ', array_keys( $filtered ) );
+        }
+
+        return $attributes;
+    }
+
+/**
+ * Render a placeholder for unknown widgets.
+ *
+ * @param string $type Widget type.
+ */
+private function render_unknown_widget( string $type ): string {
+$message = sprintf( /* translators: %s widget type */ esc_html__( 'Unknown widget: %s', 'elementor-to-gutenberg' ), esc_html( $type ) );
+$paragraph = sprintf( '<p>%s</p>', $message );
+
+        return Block_Builder::build(
+            'group',
+            array( 'layout' => array( 'type' => 'constrained' ) ),
+            '<!-- wp:paragraph -->' . $paragraph . '<!-- /wp:paragraph -->' . "\n"
+        );
+}
 }
