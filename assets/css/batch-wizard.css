@@ -1,0 +1,145 @@
+.ele2gb-batch-wrap {
+        max-width: 1100px;
+}
+
+.ele2gb-step-indicator {
+        display: flex;
+        gap: 1rem;
+        margin: 1.5rem 0;
+        flex-wrap: wrap;
+}
+
+.ele2gb-step-bubble {
+        padding: 0.75rem 1.25rem;
+        border-radius: 999px;
+        background: #f1f1f1;
+        font-weight: 600;
+        color: #555d66;
+}
+
+.ele2gb-step-bubble.is-active {
+        background: #2271b1;
+        color: #fff;
+}
+
+.ele2gb-step[hidden] {
+        display: none;
+}
+
+.ele2gb-step-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+}
+
+.ele2gb-action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+}
+
+.ele2gb-selection-note {
+        margin: 0;
+        font-style: italic;
+        color: #50575e;
+}
+
+.ele2gb-summary ul,
+#ele2gb-results {
+        margin: 0;
+        padding-left: 1.25rem;
+}
+
+.ele2gb-summary li {
+        margin-bottom: 0.5rem;
+}
+
+.ele2gb-progress {
+        margin-top: 1.5rem;
+}
+
+.ele2gb-progress-bar {
+        background: #e2e4e7;
+        height: 12px;
+        border-radius: 6px;
+        overflow: hidden;
+        margin-bottom: 0.75rem;
+}
+
+.ele2gb-progress-fill {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: #2271b1;
+        transition: width 0.3s ease;
+}
+
+#ele2gb-progress-label {
+        margin: 0 0 1rem;
+        font-weight: 600;
+}
+
+#ele2gb-results li {
+        margin-bottom: 0.5rem;
+        padding-left: 0.25rem;
+        border-left: 4px solid #dcdcde;
+}
+
+#ele2gb-results li.status-success {
+        border-left-color: #2c9f45;
+}
+
+#ele2gb-results li.status-skipped {
+        border-left-color: #f0b849;
+}
+
+#ele2gb-results li.status-failed {
+        border-left-color: #d63638;
+}
+
+.ele2gb-messages {
+        margin-top: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 4px;
+        display: none;
+}
+
+.ele2gb-messages.is-info {
+        display: block;
+        background: #f0f6fc;
+        color: #1d2327;
+        border: 1px solid #c3d7ef;
+}
+
+.ele2gb-messages.is-success {
+        display: block;
+        background: #f0fdf4;
+        color: #14532d;
+        border: 1px solid #c7f0d6;
+}
+
+.ele2gb-messages.is-error {
+        display: block;
+        background: #fdf3f3;
+        color: #8a1f1f;
+        border: 1px solid #f5c4c4;
+}
+
+.ele2gb-progress-controls {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+}
+
+.ele2gb-progress-controls .button-primary[disabled] {
+        opacity: 0.6;
+}
+
+.ele2gb-filter-row select,
+.ele2gb-filter-row input[type="date"] {
+        margin-right: 0.5rem;
+}
