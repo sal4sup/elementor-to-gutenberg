@@ -11,7 +11,6 @@ defined( 'ABSPATH' ) || exit;
 
 use Progressus\Gutenberg\Admin\Admin_Settings;
 use Progressus\Gutenberg\Admin\Batch_Convert_Wizard;
-use Progressus\Gutenberg\Admin\Batch_Convert_Wizard_V2;
 
 /**
  * Class Gutenberg
@@ -121,7 +120,6 @@ class Gutenberg {
 	 */
 	public function init(): void {
 		Admin_Settings::instance();
-		Batch_Convert_Wizard::instance();
-		Batch_Convert_Wizard_V2::instance();
-	}
+                Batch_Convert_Wizard::instance();
+        }
 }

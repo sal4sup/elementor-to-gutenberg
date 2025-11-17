@@ -1,12 +1,12 @@
 (function (window, document) {
     'use strict';
 
-    if (!window.ele2gbBatchWizardV2) {
+    if (!window.ele2gbBatchWizard) {
         return;
     }
 
-    const data = window.ele2gbBatchWizardV2;
-    const root = document.getElementById('ele2gb-batch-convert-v2-root');
+    const data = window.ele2gbBatchWizard;
+    const root = document.getElementById('ele2gb-batch-convert-root');
     if (!root) {
         return;
     }
@@ -395,7 +395,7 @@
             }
             this.stopPolling();
             const poll = () => {
-                this.request('ele2gb_v2_poll_job', { jobId: this.state.job.id })
+                this.request('ele2gb_poll_job', { jobId: this.state.job.id })
                     .then((response) => {
                         if (response && response.job) {
                             this.state.job = response.job;
@@ -482,7 +482,7 @@
                 payload.defaultFooter = this.state.defaultFooterId || 0;
             }
 
-            this.request('ele2gb_v2_start_job', payload)
+            this.request('ele2gb_start_job', payload)
                 .then((response) => {
                     if (response && response.job) {
                         this.state.job = response.job;
@@ -534,7 +534,7 @@
             this.render();
 
             this.state.isSubmitting = true;
-            this.request('ele2gb_v2_start_job', payload)
+            this.request('ele2gb_start_job', payload)
                 .then((response) => {
                     if (response && response.job) {
                         this.state.job = response.job;
@@ -554,7 +554,7 @@
 
         refreshPages() {
             this.state.refreshing = true;
-            this.request('ele2gb_v2_pages', {})
+            this.request('ele2gb_pages', {})
                 .then((response) => {
                     if (response && Array.isArray(response.pages)) {
                         this.pages = response.pages;
@@ -585,12 +585,12 @@
         }
 
         renderHeader() {
-            const header = createElement('div', 'ele2gb-wizard-v2-header');
+            const header = createElement('div', 'ele2gb-wizard-header');
             const steps = this.getStepSequence();
             const index = Math.max(0, steps.indexOf(this.state.currentStep));
             const title = this.getStepTitle(this.state.currentStep);
             const stepText = formatString(this.strings.step || 'Step %1$s of %2$s — %3$s', index + 1, steps.length, title);
-            header.appendChild(createElement('div', 'ele2gb-wizard-v2-steps', stepText));
+            header.appendChild(createElement('div', 'ele2gb-wizard-steps', stepText));
 
             const progress = createElement('div', 'ele2gb-progress-bar');
             const percent = steps.length ? ((index + 1) / steps.length) * 100 : 0;
@@ -612,7 +612,7 @@
 
         renderModeStep() {
             const container = createElement('div');
-            container.appendChild(createElement('h2', 'ele2gb-wizard-v2-step-title', this.strings.modeTitle || 'Choose Mode'));
+            container.appendChild(createElement('h2', 'ele2gb-wizard-step-title', this.strings.modeTitle || 'Choose Mode'));
 
             const grid = createElement('div', 'ele2gb-mode-grid');
             const modes = [
@@ -667,7 +667,7 @@
 
         renderSelectStep() {
             const container = createElement('div');
-            container.appendChild(createElement('h2', 'ele2gb-wizard-v2-step-title', this.strings.selectPagesTitle || 'Select Pages'));
+            container.appendChild(createElement('h2', 'ele2gb-wizard-step-title', this.strings.selectPagesTitle || 'Select Pages'));
 
             if (!this.pages.length) {
                 container.appendChild(createElement('p', null, this.strings.noPagesFound || 'No Elementor pages found.'));
@@ -939,7 +939,7 @@
 
         renderTemplatesStep() {
             const container = createElement('div');
-            container.appendChild(createElement('h2', 'ele2gb-wizard-v2-step-title', this.strings.headerFooterStepTitle || 'Header & Footer Templates'));
+            container.appendChild(createElement('h2', 'ele2gb-wizard-step-title', this.strings.headerFooterStepTitle || 'Header & Footer Templates'));
 
             container.appendChild(this.renderTemplatesGroup('header', this.strings.headersLabel || 'Headers'));
             container.appendChild(this.renderTemplatesGroup('footer', this.strings.footersLabel || 'Footers'));
@@ -1002,7 +1002,7 @@
 
         renderConflictStep() {
             const container = createElement('div');
-            container.appendChild(createElement('h2', 'ele2gb-wizard-v2-step-title', this.strings.conflictsTitle || 'Resolve Conflicts'));
+            container.appendChild(createElement('h2', 'ele2gb-wizard-step-title', this.strings.conflictsTitle || 'Resolve Conflicts'));
             const count = this.getConflictCount();
             const summary = formatString(this.strings.conflictDetected || '%1$d selected pages already have a converted version.', count);
             container.appendChild(createElement('p', 'ele2gb-step-description', summary));
@@ -1045,7 +1045,7 @@
 
         renderReviewStep() {
             const container = createElement('div');
-            container.appendChild(createElement('h2', 'ele2gb-wizard-v2-step-title', this.strings.reviewTitle || 'Review & Confirm'));
+            container.appendChild(createElement('h2', 'ele2gb-wizard-step-title', this.strings.reviewTitle || 'Review & Confirm'));
 
             const selectedCount = this.state.selectedPageIds.size;
             const convertedSelected = this.getSelectedPages().filter((page) => page.conversionStatus === 'converted').length;
@@ -1116,7 +1116,7 @@
 
         renderProgressStep() {
             const container = createElement('div');
-            container.appendChild(createElement('h2', 'ele2gb-wizard-v2-step-title', this.strings.progressTitle || 'Progress & Results'));
+            container.appendChild(createElement('h2', 'ele2gb-wizard-step-title', this.strings.progressTitle || 'Progress & Results'));
 
             if (!this.state.job) {
                 container.appendChild(createElement('p', null, this.strings.processing || 'Processing…'));
