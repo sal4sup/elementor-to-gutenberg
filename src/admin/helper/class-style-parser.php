@@ -4,7 +4,6 @@
  *
  * @package Progressus\Gutenberg
  */
-
 namespace Progressus\Gutenberg\Admin\Helper;
 
 use function sanitize_html_class;
@@ -36,7 +35,6 @@ class Style_Parser {
 	 * Parse typography settings from Elementor settings.
 	 *
 	 * @param array $settings The Elementor settings array.
-	 *
 	 * @return array Array containing 'attributes' and 'style' keys.
 	 */
 	public static function parse_typography( array $settings ): array {
@@ -705,7 +703,6 @@ class Style_Parser {
 		return null;
 	}
 
-
 	/**
 	 * Parse spacing settings from Elementor settings.
 	 *
@@ -762,7 +759,6 @@ class Style_Parser {
 	 * Parse border settings from Elementor settings.
 	 *
 	 * @param array $settings The Elementor settings array.
-	 *
 	 * @return array Array containing 'attributes' and 'style' keys.
 	 */
 	public static function parse_border( array $settings ): array {
