@@ -12,7 +12,7 @@ use Progressus\Gutenberg\Admin\Helper\Style_Parser;
 use Progressus\Gutenberg\Admin\Widget_Handler_Interface;
 
 use function esc_attr;
-use function wp_kses_post;
+use function esc_html;
 
 defined( 'ABSPATH' ) || exit;
 
