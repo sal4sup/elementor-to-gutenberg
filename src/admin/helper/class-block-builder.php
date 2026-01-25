@@ -63,10 +63,18 @@ class Block_Builder {
 	 *
 	 * @return bool True when hardening must be bypassed.
 	 */
-	private static function should_bypass_hardening( string $block_slug, array $options ): bool {
+	private static function should_bypass_hardening( string $block_name, array $options ): bool {
 		if ( array_key_exists( 'raw', $options ) ) {
 			return true === $options['raw'];
 		}
+
+		$full_name = self::to_full_block_name( $block_name );
+
+		if ( 0 !== strpos( $full_name, 'core/' ) ) {
+			return true;
+		}
+
+		$block_slug = self::get_block_slug( $full_name );
 
 		return in_array( $block_slug, self::$raw_blocks, true );
 	}
@@ -86,16 +94,14 @@ class Block_Builder {
 		}
 
 		$block_slug = self::get_block_slug( $block );
-
-		$bypass     = self::should_bypass_hardening( $block_slug, $options );
-
+		$bypass     = self::should_bypass_hardening( $block, $options );
 		if ( ! $bypass ) {
 			$attrs      = Block_Output_Builder::prepare_attributes( $block_slug, self::normalize_attributes( $attrs ) );
 			$inner_html = Block_Output_Builder::sanitize_inner_html( $block_slug, $inner_html );
 		} else {
-			$attrs                 = self::normalize_attributes( $attrs );
-			$inner_html            = wp_kses_post( (string) $inner_html );
-			$options['strict']     = false;
+			$attrs             = self::normalize_attributes( $attrs );
+			$inner_html        = (string) $inner_html;
+			$options['strict'] = false;
 		}
 
 		if ( 'image' === $block_slug ) {
@@ -105,7 +111,10 @@ class Block_Builder {
 		}
 
 		if ( 'button' === $block && '' === trim( $inner_html ) ) {
-			$attr_json = empty( $attrs ) ? '' : ' ' . wp_json_encode( $attrs );
+			$attr_json = empty( $attrs ) ? '' : ' ' . wp_json_encode(
+					$attrs,
+					JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+				);
 
 			return sprintf( '<!-- wp:%s%s /-->%s', $block, $attr_json, "\n" );
 		}
@@ -116,8 +125,10 @@ class Block_Builder {
 			return self::build_strict_serialized( $block, $attrs, $inner_html );
 		}
 
-		$attr_json    = empty( $attrs ) ? '' : ' ' . wp_json_encode( $attrs );
-		$opening      = sprintf( '<!-- wp:%s%s -->', $block, $attr_json );
+		       $attr_json    = empty( $attrs ) ? '' : ' ' . wp_json_encode(
+				               $attrs,
+				               JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+				                                                );		$opening      = sprintf( '<!-- wp:%s%s -->', $block, $attr_json );
 		$closing      = sprintf( '<!-- /wp:%s -->', $block );
 		$wrapper_html = $inner_html;
 
@@ -351,7 +362,7 @@ class Block_Builder {
 
 		$block_slug = self::get_block_slug( $block );
 
-		$bypass     = self::should_bypass_hardening( $block_slug, $options );
+		$bypass     = self::should_bypass_hardening( $block, $options );
 
 		if ( ! $bypass ) {
 			$attrs      = Block_Output_Builder::prepare_attributes( $block_slug, self::normalize_attributes( $attrs ) );
@@ -365,15 +376,20 @@ class Block_Builder {
 		}
 
 		if ( 'button' === $block && '' === trim( $inner_html ) ) {
-			$attr_json = empty( $attrs ) ? '' : ' ' . wp_json_encode( $attrs );
+			$attr_json = empty( $attrs ) ? '' : ' ' . wp_json_encode(
+					$attrs,
+					JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+				);
 
 			return sprintf( '<!-- wp:%s%s /-->%s', $block, $attr_json, "\n" );
 		}
 
 		$is_wrapper = in_array( $block_slug, self::$wrapper_blocks, true );
 
-		$attr_json    = empty( $attrs ) ? '' : ' ' . wp_json_encode( $attrs );
-		$opening      = sprintf( '<!-- wp:%s%s -->', $block, $attr_json );
+		       $attr_json    = empty( $attrs ) ? '' : ' ' . wp_json_encode(
+				               $attrs,
+				               JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+				                                                );		$opening      = sprintf( '<!-- wp:%s%s -->', $block, $attr_json );
 		$closing      = sprintf( '<!-- /wp:%s -->', $block );
 		$wrapper_html = $inner_html;
 
