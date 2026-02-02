@@ -1,0 +1,83 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "gutenberg/icon",
+  "title": "Styled Icon Block",
+  "keywords": [
+    "icon",
+    "symbol",
+    "svg"
+  ],
+  "version": "1.0.0",
+  "textdomain": "gutenberg",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css",
+  "viewScript": "file:./view.js",
+  "editorScript": "file:./index.js",
+  "category": "design",
+  "icon": "star-filled",
+  "description": "A customizable FontAwesome icon block with extensive styling options and hover effects.",
+  "example": {
+    "attributes": {
+      "icon": "fa-heart",
+      "iconStyle": "fas",
+      "size": 48,
+      "color": "#e74c3c",
+      "alignment": "center"
+    }
+  },
+  "supports": {
+    "html": false,
+    "anchor": true,
+    "align": [
+      "left",
+      "right",
+      "center"
+    ],
+    "spacing": {
+      "margin": true,
+      "padding": true
+    }
+  },
+  "attributes": {
+    "alignment": {
+      "type": "string",
+      "default": "left"
+    },
+    "link": {
+      "type": "string",
+      "source": "attribute",
+      "selector": "a",
+      "attribute": "href",
+      "default": ""
+    },
+    "linkTarget": {
+      "type": "string",
+      "source": "attribute",
+      "selector": "a",
+      "attribute": "target",
+      "default": ""
+    },
+    "ariaLabel": {
+      "type": "string",
+      "source": "attribute",
+      "selector": "a",
+      "attribute": "aria-label",
+      "default": ""
+    },
+    "svgUrl": {
+      "type": "string",
+      "source": "attribute",
+      "selector": "img.svg-icon",
+      "attribute": "src",
+      "default": ""
+    },
+    "svgStyle": {
+      "type": "string",
+      "source": "attribute",
+      "selector": "img.svg-icon",
+      "attribute": "style",
+      "default": ""
+    }
+  }
+}
