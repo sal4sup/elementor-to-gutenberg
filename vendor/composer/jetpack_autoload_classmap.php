@@ -418,9 +418,17 @@ return array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/widget/class-nested-tabs-widget-handler.php'
 	),
+	'Progressus\\Gutenberg\\Admin\\Widget\\Posts_Widget_Handler' => array(
+		'version' => 'dev-main',
+		'path'    => $baseDir . '/src/admin/widget/class-posts-widget-handler.php'
+	),
 	'Progressus\\Gutenberg\\Admin\\Widget\\Progress_Widget_Handler' => array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/widget/class-progress-widget-handler.php'
+	),
+	'Progressus\\Gutenberg\\Admin\\Widget\\Search_Form_Widget_Handler' => array(
+		'version' => 'dev-main',
+		'path'    => $baseDir . '/src/admin/widget/class-search-form-widget-handler.php'
 	),
 	'Progressus\\Gutenberg\\Admin\\Widget\\Shortcode_Widget_Handler' => array(
 		'version' => 'dev-main',

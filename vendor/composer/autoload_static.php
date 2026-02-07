@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit011693d08cd130ea269c21e7b21df723
+class ComposerStaticInita31b33455fd2f1f1356ac909031c43c7
 {
     public static $prefixLengthsPsr4 = array (
         'P' => 
@@ -127,7 +127,9 @@ class ComposerStaticInit011693d08cd130ea269c21e7b21df723
         'Progressus\\Gutenberg\\Admin\\Widget\\Menu_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-menu-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Nested_Accordion_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-nested-accordion-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Nested_Tabs_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-nested-tabs-widget-handler.php',
+        'Progressus\\Gutenberg\\Admin\\Widget\\Posts_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-posts-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Progress_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-progress-widget-handler.php',
+        'Progressus\\Gutenberg\\Admin\\Widget\\Search_Form_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-search-form-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Shortcode_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-shortcode-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Site_Logo_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-site-logo-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Social_Icons_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-social-icon-widget-handler.php',
@@ -154,9 +156,9 @@ class ComposerStaticInit011693d08cd130ea269c21e7b21df723
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit011693d08cd130ea269c21e7b21df723::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit011693d08cd130ea269c21e7b21df723::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInit011693d08cd130ea269c21e7b21df723::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInita31b33455fd2f1f1356ac909031c43c7::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInita31b33455fd2f1f1356ac909031c43c7::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInita31b33455fd2f1f1356ac909031c43c7::$classMap;
 
         }, null, ClassLoader::class);
     }
