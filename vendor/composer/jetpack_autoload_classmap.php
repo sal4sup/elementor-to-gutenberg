@@ -466,6 +466,10 @@ return array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/widget/class-video-widget-handler.php'
 	),
+	'Progressus\\Gutenberg\\Admin\\Widget\\WP_Widget_Handler' => array(
+		'version' => 'dev-main',
+		'path'    => $baseDir . '/src/admin/widget/class-wp-widget-handler.php'
+	),
 	'Progressus\\Gutenberg\\Admin\\Widget\\Woo_Add_To_Cart_Widget_Handler' => array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/widget/class-woo-add-to-cart-widget-handler.php'

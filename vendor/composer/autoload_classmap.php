@@ -111,6 +111,7 @@ return array(
     'Progressus\\Gutenberg\\Admin\\Widget\\Testimonial_Widget_Handler' => $baseDir . '/src/admin/widget/class-testimonial-widget-handler.php',
     'Progressus\\Gutenberg\\Admin\\Widget\\Text_Editor_Widget_Handler' => $baseDir . '/src/admin/widget/class-text-editor-widget-handler.php',
     'Progressus\\Gutenberg\\Admin\\Widget\\Video_Widget_Handler' => $baseDir . '/src/admin/widget/class-video-widget-handler.php',
+    'Progressus\\Gutenberg\\Admin\\Widget\\WP_Widget_Handler' => $baseDir . '/src/admin/widget/class-wp-widget-handler.php',
     'Progressus\\Gutenberg\\Admin\\Widget\\Woo_Add_To_Cart_Widget_Handler' => $baseDir . '/src/admin/widget/class-woo-add-to-cart-widget-handler.php',
     'Progressus\\Gutenberg\\Admin\\Widget\\Woo_Block_Serializer_Trait' => $baseDir . '/src/admin/widget/trait-woo-block-serializer.php',
     'Progressus\\Gutenberg\\Admin\\Widget\\Woo_Cart_Widget_Handler' => $baseDir . '/src/admin/widget/class-woo-cart-widget-handler.php',
