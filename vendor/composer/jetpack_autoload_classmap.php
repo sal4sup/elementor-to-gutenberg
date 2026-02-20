@@ -378,6 +378,10 @@ return array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/widget/class-gallery-widget-handler.php'
 	),
+	'Progressus\\Gutenberg\\Admin\\Widget\\Generic_Elementor_Widget_Handler' => array(
+		'version' => 'dev-main',
+		'path'    => $baseDir . '/src/admin/widget/class-generic-elementor-widget-handler.php'
+	),
 	'Progressus\\Gutenberg\\Admin\\Widget\\Heading_Widget_Handler' => array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/widget/class-heading-widget-handler.php'

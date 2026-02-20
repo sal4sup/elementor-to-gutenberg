@@ -117,6 +117,7 @@ class ComposerStaticInita31b33455fd2f1f1356ac909031c43c7
         'Progressus\\Gutenberg\\Admin\\Widget\\Divider_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-divider-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Form_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-form-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Gallery_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-gallery-widget-handler.php',
+        'Progressus\\Gutenberg\\Admin\\Widget\\Generic_Elementor_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-generic-elementor-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Heading_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-heading-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Icon_Box_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-icon-box-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Icon_List_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-icon-list-widget-handler.php',
