@@ -3,7 +3,7 @@
         'name' => 'progressus/elementor-to-gutenberg',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '0cf8f27e40fe64656309c65234003d5748a0df6a',
+        'reference' => '76de7aaa76db7bcb2eff702809b442ab1988a2dd',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -76,7 +76,7 @@
         'progressus/elementor-to-gutenberg' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '0cf8f27e40fe64656309c65234003d5748a0df6a',
+            'reference' => '76de7aaa76db7bcb2eff702809b442ab1988a2dd',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
