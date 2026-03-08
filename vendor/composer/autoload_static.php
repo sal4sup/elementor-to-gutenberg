@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInita31b33455fd2f1f1356ac909031c43c7
+class ComposerStaticInit1cc9813ecf99766b5dc6dbad0ee83f9c
 {
     public static $prefixLengthsPsr4 = array (
         'P' => 
@@ -139,6 +139,7 @@ class ComposerStaticInita31b33455fd2f1f1356ac909031c43c7
         'Progressus\\Gutenberg\\Admin\\Widget\\Testimonial_Carousel_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-testimonial-carousel-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Testimonial_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-testimonial-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Text_Editor_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-text-editor-widget-handler.php',
+        'Progressus\\Gutenberg\\Admin\\Widget\\Toggle_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-toggle-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Video_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-video-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\WP_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-wp-widget-handler.php',
         'Progressus\\Gutenberg\\Admin\\Widget\\Woo_Add_To_Cart_Widget_Handler' => __DIR__ . '/../..' . '/src/admin/widget/class-woo-add-to-cart-widget-handler.php',
@@ -158,9 +159,9 @@ class ComposerStaticInita31b33455fd2f1f1356ac909031c43c7
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInita31b33455fd2f1f1356ac909031c43c7::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInita31b33455fd2f1f1356ac909031c43c7::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInita31b33455fd2f1f1356ac909031c43c7::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit1cc9813ecf99766b5dc6dbad0ee83f9c::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit1cc9813ecf99766b5dc6dbad0ee83f9c::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit1cc9813ecf99766b5dc6dbad0ee83f9c::$classMap;
 
         }, null, ClassLoader::class);
     }

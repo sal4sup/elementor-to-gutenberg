@@ -466,6 +466,10 @@ return array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/widget/class-text-editor-widget-handler.php'
 	),
+	'Progressus\\Gutenberg\\Admin\\Widget\\Toggle_Widget_Handler' => array(
+		'version' => 'dev-main',
+		'path'    => $baseDir . '/src/admin/widget/class-toggle-widget-handler.php'
+	),
 	'Progressus\\Gutenberg\\Admin\\Widget\\Video_Widget_Handler' => array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/widget/class-video-widget-handler.php'
