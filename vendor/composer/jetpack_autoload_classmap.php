@@ -282,6 +282,10 @@ return array(
 		'version' => '2.12.0',
 		'path'    => $vendorDir . '/automattic/jetpack-autoloader/src/class-plugins-handler.php'
 	),
+	'Progressus\\Gutenberg\\Admin\\AI_Improvement_Admin' => array(
+		'version' => 'dev-main',
+		'path'    => $baseDir . '/src/admin/class-ai-improvement-admin.php'
+	),
 	'Progressus\\Gutenberg\\Admin\\Admin_Settings' => array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/class-admin-settings.php'
@@ -289,6 +293,14 @@ return array(
 	'Progressus\\Gutenberg\\Admin\\Batch_Convert_Wizard' => array(
 		'version' => 'dev-main',
 		'path'    => $baseDir . '/src/admin/class-batch-convert-wizard.php'
+	),
+	'Progressus\\Gutenberg\\Admin\\Helper\\AI_Prompt_Builder' => array(
+		'version' => 'dev-main',
+		'path'    => $baseDir . '/src/admin/helper/class-ai-prompt-builder.php'
+	),
+	'Progressus\\Gutenberg\\Admin\\Helper\\AI_Workspace_Repository' => array(
+		'version' => 'dev-main',
+		'path'    => $baseDir . '/src/admin/helper/class-ai-workspace-repository.php'
 	),
 	'Progressus\\Gutenberg\\Admin\\Helper\\Alignment_Helper' => array(
 		'version' => 'dev-main',
