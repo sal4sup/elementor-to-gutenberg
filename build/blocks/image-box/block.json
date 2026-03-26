@@ -40,6 +40,22 @@
       "type": "number",
       "default": 100
     },
+    "imageBorderRadius": {
+      "type": "string",
+      "default": ""
+    },
+    "imageSpace": {
+      "type": "string",
+      "default": ""
+    },
+    "wrapperPadding": {
+      "type": "string",
+      "default": ""
+    },
+    "wrapperMargin": {
+      "type": "string",
+      "default": ""
+    },
     "objectFit": {
       "type": "string",
       "default": "cover"
@@ -137,6 +153,10 @@
       "default": ""
     },
     "alignment": {
+      "type": "string",
+      "default": "left"
+    },
+    "align": {
       "type": "string",
       "default": "left"
     },
